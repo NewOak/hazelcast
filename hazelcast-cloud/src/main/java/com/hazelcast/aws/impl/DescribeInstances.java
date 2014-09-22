@@ -16,8 +16,9 @@
 
 package com.hazelcast.aws.impl;
 
+import com.hazelcast.InstancesDescriptor;
 import com.hazelcast.aws.security.EC2RequestSigner;
-import com.hazelcast.aws.utility.CloudyUtility;
+import com.hazelcast.aws.utility.AwsCloudyUtility;
 import com.hazelcast.config.AwsConfig;
 
 import java.io.InputStream;
@@ -34,7 +35,7 @@ import static com.hazelcast.aws.impl.Constants.GET;
 import static com.hazelcast.aws.impl.Constants.SIGNATURE_METHOD;
 import static com.hazelcast.aws.impl.Constants.SIGNATURE_VERSION;
 
-public class DescribeInstances {
+public class DescribeInstances implements InstancesDescriptor {
 
     private final EC2RequestSigner rs;
     private final AwsConfig awsConfig;
@@ -69,7 +70,7 @@ public class DescribeInstances {
 
 
     public String getQueryString() {
-        return CloudyUtility.getQueryString(attributes);
+        return AwsCloudyUtility.getQueryString(attributes);
     }
 
     public Map<String, String> getAttributes() {
@@ -83,7 +84,7 @@ public class DescribeInstances {
     public Map<String, String> execute(String endpoint) throws Exception {
         rs.sign(this, endpoint);
         InputStream stream = callService(endpoint);
-        return CloudyUtility.unmarshalTheResponse(stream, awsConfig);
+        return AwsCloudyUtility.unmarshalTheResponse(stream, awsConfig);
     }
 
     private InputStream callService(String endpoint) throws Exception {

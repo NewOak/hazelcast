@@ -16,6 +16,7 @@
 
 package com.hazelcast.aws.security;
 
+import com.hazelcast.InstancesDescriptor;
 import com.hazelcast.aws.impl.DescribeInstances;
 import com.hazelcast.aws.utility.AwsURLEncoder;
 
@@ -38,7 +39,7 @@ public class EC2RequestSigner {
         this.secretKey = secretKey;
     }
 
-    public void sign(DescribeInstances request, String endpoint) {
+    public void sign(InstancesDescriptor request, String endpoint) {
         String canonicalizedQueryString = getCanonicalizedQueryString(request);
         String stringToSign = HTTP_VERB + endpoint + "\n" + HTTP_REQUEST_URI + canonicalizedQueryString;
         String signature = signTheString(stringToSign);
@@ -55,7 +56,7 @@ public class EC2RequestSigner {
         return signature;
     }
 
-    private String getCanonicalizedQueryString(DescribeInstances request) {
+    private String getCanonicalizedQueryString(InstancesDescriptor request) {
         List<String> components = getListOfEntries(request.getAttributes());
         Collections.sort(components);
         return getCanonicalizedQueryString(components);

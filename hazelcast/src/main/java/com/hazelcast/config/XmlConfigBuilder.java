@@ -518,6 +518,37 @@ public class XmlConfigBuilder extends AbstractXmlConfigHelper implements ConfigB
                 handleTcpIp(child);
             } else if ("aws".equals(name)) {
                 handleAWS(child);
+            } else if ("azure".equals(name)) {
+                handleAzure(child);
+            }
+        }
+    }
+
+    private void handleAzure(Node node) {
+        final JoinConfig join = config.getNetworkConfig().getJoin();
+        final NamedNodeMap atts = node.getAttributes();
+        final AzureConfig azureConfig = join.getAzureConfig();
+        for (int a = 0; a < atts.getLength(); a++) {
+            final Node att = atts.item(a);
+            final String value = getTextContent(att).trim();
+            if ("enabled".equalsIgnoreCase(att.getNodeName())) {
+                azureConfig.setEnabled(checkTrue(value));
+            } else if (att.getNodeName().equals("connection-timeout-seconds")) {
+                azureConfig.setConnectionTimeoutSeconds(getIntegerValue("connection-timeout-seconds", value, DEFAULT_VALUE));
+            }
+        }
+        for (Node n : new IterableNodeList(node.getChildNodes())) {
+            final String value = getTextContent(n).trim();
+            if ("subscription-id".equals(cleanNodeName(n.getNodeName()))) {
+                azureConfig.setSubscriptionId(value);
+            } else if ("service-name".equals(cleanNodeName(n.getNodeName()))) {
+                azureConfig.setServiceName(value);
+            } else if ("host".equals(cleanNodeName(n.getNodeName()))) {
+                azureConfig.setHost(value);
+            } else if ("key-store-location".equals(cleanNodeName(n.getNodeName()))) {
+                azureConfig.setKeyStoreLocation(value);
+            } else if ("key-store-password".equals(cleanNodeName(n.getNodeName()))) {
+                azureConfig.setKeyStorePassword(value);
             }
         }
     }

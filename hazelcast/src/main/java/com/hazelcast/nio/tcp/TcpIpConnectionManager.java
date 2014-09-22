@@ -214,7 +214,7 @@ public class TcpIpConnectionManager implements ConnectionManager {
         final Address thisAddress = ioService.getThisAddress();
         if (!connection.isClient() && !thisAddress.equals(localEndpoint)) {
             log(Level.WARNING, "Wrong bind request from " + remoteEndPoint
-                    + "! This node is not requested endpoint: " + localEndpoint);
+                    + "! This node '" + thisAddress + "' is not requested endpoint: " + localEndpoint);
             connection.close();
             return false;
         }

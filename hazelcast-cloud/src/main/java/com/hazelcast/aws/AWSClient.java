@@ -16,13 +16,14 @@
 
 package com.hazelcast.aws;
 
+import com.hazelcast.CloudClient;
 import com.hazelcast.aws.impl.DescribeInstances;
 import com.hazelcast.config.AwsConfig;
 
 import java.util.Collection;
 import java.util.Map;
 
-public class AWSClient {
+public class AWSClient implements CloudClient {
 
     private String endpoint;
     private final AwsConfig awsConfig;
@@ -41,11 +42,13 @@ public class AWSClient {
         endpoint = awsConfig.getHostHeader();
     }
 
+    @Override
     public Collection<String> getPrivateIpAddresses() throws Exception {
         final Map<String, String> result = new DescribeInstances(awsConfig).execute(endpoint);
         return result.keySet();
     }
 
+    @Override
     public Map<String, String> getAddresses() throws Exception {
         return new DescribeInstances(awsConfig).execute(endpoint);
     }

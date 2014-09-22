@@ -19,7 +19,7 @@ package com.hazelcast.config;
 import static com.hazelcast.util.ValidationUtil.isNotNull;
 
 /**
- * Contains the 3 different join configurations; tcp-ip/multicast/aws. Only one of them should be enabled!
+ * Contains the 4 different join configurations; tcp-ip/multicast/aws/azure. Only one of them should be enabled!
  */
 public class JoinConfig {
 
@@ -28,6 +28,8 @@ public class JoinConfig {
     private TcpIpConfig tcpIpConfig = new TcpIpConfig();
 
     private AwsConfig awsConfig = new AwsConfig();
+
+    private AzureConfig azureConfig = new AzureConfig();
 
     /**
      * @return the multicastConfig
@@ -42,6 +44,22 @@ public class JoinConfig {
      */
     public JoinConfig setMulticastConfig(final MulticastConfig multicastConfig) {
         this.multicastConfig = isNotNull(multicastConfig, "multicastConfig");
+        return this;
+    }
+
+    /**
+     * @return the azureConfig
+     */
+    public AzureConfig getAzureConfig() {
+        return azureConfig;
+    }
+
+    /**
+     * @param azureConfig the azureConfig to set
+     * @throws IllegalArgumentException if azureConfig is null.
+     */
+    public JoinConfig setAzureConfig(AzureConfig azureConfig) {
+        this.azureConfig = isNotNull(azureConfig, "azureConfig");
         return this;
     }
 

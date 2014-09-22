@@ -622,6 +622,18 @@ public class Node {
                 logger.severe("Error while creating AWSJoiner!", e);
             }
         }
+        else if (join.getAzureConfig().isEnabled()) {
+            Class clazz;
+            try {
+                logger.info("Creating AzureJoiner");
+                clazz = Class.forName("com.hazelcast.cluster.TcpIpJoinerOverAzure");
+                Constructor constructor = clazz.getConstructor(Node.class);
+                systemLogService.logJoin("Creating AzureJoiner");
+                return (Joiner) constructor.newInstance(this);
+            } catch (Exception e) {
+                logger.severe("Error while creating AzureJoiner!", e);
+            }
+        }
         return null;
     }
 
