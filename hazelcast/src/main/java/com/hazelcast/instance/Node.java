@@ -587,7 +587,7 @@ public class Node {
                 logger.info("Creating AzureJoiner");
                 clazz = Class.forName("com.hazelcast.cluster.TcpIpJoinerOverAzure");
                 Constructor constructor = clazz.getConstructor(Node.class);
-                systemLogService.logJoin("Creating AzureJoiner");
+				logger.info("Creating TcpIpJoiner");
                 return (Joiner) constructor.newInstance(this);
             } catch (Exception e) {
                 logger.severe("Error while creating AzureJoiner!", e);
