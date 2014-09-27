@@ -25,9 +25,9 @@ import com.hazelcast.spi.ExecutionService;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.PartitionAwareOperation;
 import com.hazelcast.spi.UrgentSystemOperation;
+import com.hazelcast.util.executor.HazelcastManagedThread;
 
 import java.util.Queue;
-import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
@@ -78,12 +78,6 @@ public final class BasicOperationScheduler {
     //and a task gets processed as quickly as possible.
     private final BlockingQueue genericWorkQueue = new LinkedBlockingQueue();
     private final ConcurrentLinkedQueue genericPriorityWorkQueue = new ConcurrentLinkedQueue();
-
-    //The genericOperationRandom is used when a generic operation is scheduled, and a generic OperationThread
-    //needs to be selected.
-    //We could have a look at the ThreadLocalRandom, but it requires java 7. So some kind of reflection
-    //could to the trick to use something less painful.
-    private final Random genericOperationRandom = new Random();
 
     private final ResponseThread responseThread;
 
@@ -199,9 +193,11 @@ public final class BasicOperationScheduler {
 
         if (currentThread instanceof OperationThread) {
             if (partitionId > -1) {
-                //todo: we need to check for isPartitionSpecific
-                int threadId = ((OperationThread) currentThread).threadId;
-                return toPartitionThreadIndex(partitionId) == threadId;
+                OperationThread operationThread = (OperationThread) currentThread;
+                if (operationThread.isPartitionSpecific) {
+                    int threadId = operationThread.threadId;
+                    return toPartitionThreadIndex(partitionId) == threadId;
+                }
             }
             return true;
         }
@@ -250,6 +246,10 @@ public final class BasicOperationScheduler {
         } else {
             executeOnExternalExecutor(op, executorName);
         }
+    }
+
+    public void execute(Runnable task, int partitionId) {
+        execute(task, partitionId, false);
     }
 
     private void executeOnExternalExecutor(Operation op, String executorName) {
@@ -385,7 +385,7 @@ public final class BasicOperationScheduler {
         }
     }
 
-    final class OperationThread extends Thread {
+    final class OperationThread extends HazelcastManagedThread {
 
         private final int threadId;
         private final boolean isPartitionSpecific;

@@ -8,15 +8,18 @@
 
 ### Spring Configuration
 
-#### Classpath Configuration: 
-
-Hazelcast-Spring integration requires one of the following jar files in the classpath:
-
-- `hazelcast-spring-`<*version*>`.jar`
-- `hazelcast-all-`<*version*>`.jar`
+Please see our sample application for [Spring Configuration](https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/spring-configuration).
 
 
 #### Bean Declaration by Spring *beans* Namespace 
+
+***Classpath Configuration*** 
+
+This configuration requires following jar file in the classpath:
+
+- `hazelcast-`<*version*>`.jar`
+
+***Bean Declaration*** 
 
 You can declare Hazelcast Objects using the default Spring *beans* namespace. You can find an example usage of Hazelcast Instance declaration as follows:
 
@@ -42,7 +45,20 @@ You can declare Hazelcast Objects using the default Spring *beans* namespace. Yo
 
 #### Bean Declaration by *hazelcast* Namespace 
 
-Hazelcast has its own namespace **hazelcast** for bean definitions. You can easily add namespace *xmlns:hz="http://www.hazelcast.com/schema/spring"* to `beans` tag in context file so that *hz* namespace shortcut can be used as a bean declaration.
+***Classpath Configuration*** 
+
+Hazelcast-Spring integration requires following jar files in the classpath:
+
+- `hazelcast-spring-`<*version*>`.jar`
+- `hazelcast-`<*version*>`.jar`
+
+or
+
+- `hazelcast-all-`<*version*>`.jar`
+
+***Bean Declaration*** 
+
+Hazelcast has its own namespace **hazelcast** for bean definitions. You can easily add namespace declaration *xmlns:hz="http://www.hazelcast.com/schema/spring"* to `beans` tag in context file so that *hz* namespace shortcut can be used as a bean declaration.
 
 Here is an example schema definition for Hazelcast 3.3.x:
 
@@ -53,18 +69,8 @@ Here is an example schema definition for Hazelcast 3.3.x:
        xsi:schemaLocation="http://www.springframework.org/schema/beans
                 http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
                 http://www.hazelcast.com/schema/spring
-                http://www.hazelcast.com/schema/spring/hazelcast-spring-3.3.xsd">
+                http://www.hazelcast.com/schema/spring/hazelcast-spring.xsd">
 ```
-
-***hazelcast-spring*** **XSD Schemas**
-
-Each hazelcast minor release has its own XSD schemas. Below is the list of all available schemas:
-
-- `hazelcast-spring-3.3.xsd`
-- `hazelcast-spring-3.2.xsd`
-- `hazelcast-spring-3.1.xsd`
-- `hazelcast-spring-3.0.xsd`
-
 
 #### Supported Configurations with *hazelcast* Namespace
 
@@ -215,7 +221,7 @@ Hazelcast Distributed `ExecutorService` or more generally any Hazelcast managed 
                 http://www.springframework.org/schema/context
                 http://www.springframework.org/schema/context/spring-context-3.0.xsd
                 http://www.hazelcast.com/schema/spring
-                http://www.hazelcast.com/schema/spring/hazelcast-spring-3.3.xsd">
+                http://www.hazelcast.com/schema/spring/hazelcast-spring.xsd">
 
   <context:annotation-config />
 
@@ -349,6 +355,9 @@ Assert.assertEquals(bean.value, f2.get().longValue());
 
 ### Spring Cache
 
+
+Please see our sample application for [Spring Cache](https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/spring-cache-manager).
+
 As of version 3.1, Spring Framework provides support for adding caching into an existing Spring application. 
 
 #### Declarative Spring Cache Configuration
@@ -371,7 +380,7 @@ Annotation Based Configuration does not require any XML definition.
 
 - Implement a `CachingConfiguration` class with related Annotations.
 
-   ```java
+```java
 @Configuration
 @EnableCaching
 public class CachingConfiguration implements CachingConfigurer{
@@ -389,19 +398,19 @@ public class CachingConfiguration implements CachingConfigurer{
 
 - Launch Application Context and register `CachingConfiguration`.
 
-   ```java
+```java
 AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 context.register(CachingConfiguration.class);
 context.refresh();
 ```
-
-For an example application, please see [Hazelcast Code Samples](https://github.com/hazelcast/hazelcast-code-samples/tree/master/spring-data-integration/src/main/java/com/hazelcast/spring/mongodb).
 
 For more information about Spring Cache, please see [Spring Cache Abstraction](http://static.springsource.org/spring/docs/3.1.x/spring-framework-reference/html/cache.html).
 
 
 
 ### Hibernate 2nd Level Cache Config
+
+Please see our sample application for [Hibernate 2nd Level Cache Config](https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/spring-hibernate-2ndlevel-cache).
 
 If you are using Hibernate with Hazelcast as 2nd level cache provider, you can easily create `RegionFactory` instances within Spring configuration (by Spring version 3.1). That way, it is possible to use same `HazelcastInstance` as Hibernate L2 cache instance.
 

@@ -31,10 +31,10 @@ import com.hazelcast.core.MapLoader;
 import com.hazelcast.core.MapStoreFactory;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.SqlPredicate;
+import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.TestHazelcastInstanceFactory;
-import com.hazelcast.test.annotation.ProblematicTest;
 import com.hazelcast.test.annotation.QuickTest;
 import com.hazelcast.util.Clock;
 import org.junit.Before;
@@ -208,11 +208,11 @@ public class BasicMapTest extends HazelcastTestSupport {
         final CountDownLatch latch2 = new CountDownLatch(1);
         map.addEntryListener(new EntryAdapter<String, String>() {
             public void entryEvicted(EntryEvent<String, String> event) {
-                if (value1.equals(event.getValue())) {
-                    newList.add(event.getValue());
+                if (value1.equals(event.getOldValue())) {
+                    newList.add(event.getOldValue());
                     latch1.countDown();
-                } else if (value2.equals(event.getValue())) {
-                    newList.add(event.getValue());
+                } else if (value2.equals(event.getOldValue())) {
+                    newList.add(event.getOldValue());
                     latch2.countDown();
                 }
             }
@@ -244,7 +244,7 @@ public class BasicMapTest extends HazelcastTestSupport {
 
             public void entryRemoved(EntryEvent event) {
                 assertEquals("hello", event.getKey());
-                assertEquals("new world", event.getValue());
+                assertEquals("new world", event.getOldValue());
                 latchRemoved.countDown();
             }
 
@@ -1121,7 +1121,6 @@ public class BasicMapTest extends HazelcastTestSupport {
     }
 
     @Test
-    @Category(ProblematicTest.class)
     public void testMapLoaderLoadUpdatingIndex() throws Exception {
         MapConfig mapConfig = getInstance().getConfig().getMapConfig("testMapLoaderLoadUpdatingIndex");
         List<MapIndexConfig> indexConfigs = mapConfig.getMapIndexConfigs();
@@ -1137,8 +1136,9 @@ public class BasicMapTest extends HazelcastTestSupport {
             map.put(i, new SampleIndexableObject("My-" + i, i));
         }
 
-        SqlPredicate predicate = new SqlPredicate("name='My-5'");
+        final SqlPredicate predicate = new SqlPredicate("name='My-5'");
         Set<Entry<Integer, SampleIndexableObject>> result = map.entrySet(predicate);
+
         assertEquals(1, result.size());
         assertEquals(5, (int) result.iterator().next().getValue().value);
 
@@ -1147,10 +1147,16 @@ public class BasicMapTest extends HazelcastTestSupport {
         map = getInstance().getMap("testMapLoaderLoadUpdatingIndex");
         assertFalse(map.isEmpty());
 
-        predicate = new SqlPredicate("name='My-5'");
-        result = map.entrySet(predicate);
-        assertEquals(1, result.size());
-        assertEquals(5, (int) result.iterator().next().getValue().value);
+        final IMap<Integer, SampleIndexableObject> mapFinal = map;
+        assertTrueEventually(new AssertTask() {
+            @Override
+            public void run() throws Exception {
+                Set<Entry<Integer, SampleIndexableObject>> result = mapFinal.entrySet(predicate);
+                assertEquals(1, result.size());
+                assertEquals(5, (int) result.iterator().next().getValue().value);
+            }
+        });
+
     }
 
     @Test

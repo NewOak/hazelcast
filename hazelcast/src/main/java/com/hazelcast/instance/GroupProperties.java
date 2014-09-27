@@ -25,6 +25,24 @@ import com.hazelcast.util.HealthMonitorLevel;
  */
 public class GroupProperties {
 
+    /**
+     * This property can be used to verify that Hazelcast nodes only join when their 'application' level configuration is the
+     * same.
+     *
+     * So imagine that you have multiple machines, but you want to make sure that each machine that is going to join the cluster
+     * has exactly the same 'application level' settings, so settings that are not part of the Hazelcast configuration, but
+     * maybe some filepath. To prevent these machines, with potential different application level configuration, to form
+     * a cluster, this property can be set.
+     *
+     * You could use actual values, e.g. string paths, but you can also use e.g. an md5 hash. We'll give the give the guarantee
+     * that only nodes are going to form a cluster where the token is an exact match. If this token is different, the member
+     * can't be started and therefor you will get the guarantee that all members in the cluster, will have exactly the same
+     * application validation token.
+     *
+     * This validation-token will be checked before member join the cluster.
+     */
+    public static final String PROP_APPLICATION_VALIDATION_TOKEN = "hazelcast.application.validation.token";
+
     public static final String PROP_HEALTH_MONITORING_LEVEL = "hazelcast.health.monitoring.level";
     public static final String PROP_HEALTH_MONITORING_DELAY_SECONDS = "hazelcast.health.monitoring.delay.seconds";
     public static final String PROP_VERSION_CHECK_ENABLED = "hazelcast.version.check.enabled";
@@ -50,6 +68,13 @@ public class GroupProperties {
     public static final String PROP_SOCKET_SERVER_BIND_ANY = "hazelcast.socket.server.bind.any";
     public static final String PROP_SOCKET_CLIENT_BIND_ANY = "hazelcast.socket.client.bind.any";
     public static final String PROP_SOCKET_CLIENT_BIND = "hazelcast.socket.client.bind";
+    /**
+     * The number of threads the client engine has available for processing requests that are not partition specific.
+     * Most of the request e.g. map.put/map.get are partition specific and will use a partition-operation-thread, but
+     * there are also request that can't be executed on a partition-specific operation-thread, e.g. multimap.contain(value)
+     * because it needs to access all partitions on a given member.
+     */
+    public static final String PROP_CLIENT_ENGINE_THREAD_COUNT = "hazelcast.clientengine.thread.count";
     public static final String PROP_SOCKET_RECEIVE_BUFFER_SIZE = "hazelcast.socket.receive.buffer.size";
     public static final String PROP_SOCKET_SEND_BUFFER_SIZE = "hazelcast.socket.send.buffer.size";
     public static final String PROP_SOCKET_LINGER_SECONDS = "hazelcast.socket.linger.seconds";
@@ -99,8 +124,19 @@ public class GroupProperties {
     public static final String PROP_MAP_WRITE_BEHIND_QUEUE_CAPACITY = "hazelcast.map.write.behind.queue.capacity";
     public static final String PROP_ENTERPRISE_WAN_REP_QUEUESIZE = "hazelcast.enterprise.wanrep.queuesize";
     public static final String PROP_CLIENT_MAX_NO_HEARTBEAT_SECONDS = "hazelcast.client.max.no.heartbeat.seconds";
+    public static final String PROP_MIGRATION_MIN_DELAY_ON_MEMBER_REMOVED_SECONDS
+            = "hazelcast.migration.min.delay.on.member.removed.seconds";
+
+    /**
+     * forces the jcache provider which can have values client or server to force provider type,
+     * if not provided provider will be client or server whichever found on classPath first respectively
+     */
+    public static final String PROP_JCACHE_PROVIDER_TYPE = "hazelcast.jcache.provider.type";
+
+    public final GroupProperty CLIENT_ENGINE_THREAD_COUNT;
 
     public final GroupProperty PARTITION_OPERATION_THREAD_COUNT;
+
     public final GroupProperty GENERIC_OPERATION_THREAD_COUNT;
 
     public final GroupProperty EVENT_THREAD_COUNT;
@@ -231,7 +267,9 @@ public class GroupProperties {
 
     public final GroupProperty ENTERPRISE_WAN_REP_QUEUESIZE;
 
-    public final GroupProperty CLIENT_MAX_NO_HEARTBEAT_SECONDS;
+    public final GroupProperty CLIENT_HEARTBEAT_TIMEOUT_SECONDS;
+
+    public final GroupProperty MIGRATION_MIN_DELAY_ON_MEMBER_REMOVED_SECONDS;
 
     /**
      * @param config
@@ -249,6 +287,8 @@ public class GroupProperties {
         EVENT_THREAD_COUNT = new GroupProperty(config, PROP_EVENT_THREAD_COUNT, "5");
         EVENT_QUEUE_CAPACITY = new GroupProperty(config, PROP_EVENT_QUEUE_CAPACITY, "1000000");
         EVENT_QUEUE_TIMEOUT_MILLIS = new GroupProperty(config, PROP_EVENT_QUEUE_TIMEOUT_MILLIS, "250");
+        CLIENT_ENGINE_THREAD_COUNT = new GroupProperty(config, PROP_CLIENT_ENGINE_THREAD_COUNT, "-1");
+
         CONNECT_ALL_WAIT_SECONDS = new GroupProperty(config, PROP_CONNECT_ALL_WAIT_SECONDS, "120");
         MEMCACHE_ENABLED = new GroupProperty(config, PROP_MEMCACHE_ENABLED, "true");
         REST_ENABLED = new GroupProperty(config, PROP_REST_ENABLED, "true");
@@ -274,7 +314,7 @@ public class GroupProperties {
         MAX_NO_HEARTBEAT_SECONDS = new GroupProperty(config, PROP_MAX_NO_HEARTBEAT_SECONDS, "300");
         MASTER_CONFIRMATION_INTERVAL_SECONDS
                 = new GroupProperty(config, PROP_MASTER_CONFIRMATION_INTERVAL_SECONDS, "30");
-        MAX_NO_MASTER_CONFIRMATION_SECONDS = new GroupProperty(config, PROP_MAX_NO_MASTER_CONFIRMATION_SECONDS, "300");
+        MAX_NO_MASTER_CONFIRMATION_SECONDS = new GroupProperty(config, PROP_MAX_NO_MASTER_CONFIRMATION_SECONDS, "500");
         MEMBER_LIST_PUBLISH_INTERVAL_SECONDS
                 = new GroupProperty(config, PROP_MEMBER_LIST_PUBLISH_INTERVAL_SECONDS, "300");
         ICMP_ENABLED = new GroupProperty(config, PROP_ICMP_ENABLED, "false");
@@ -309,7 +349,9 @@ public class GroupProperties {
         MAP_WRITE_BEHIND_QUEUE_CAPACITY
                 = new GroupProperty(config, PROP_MAP_WRITE_BEHIND_QUEUE_CAPACITY, "50000");
         ENTERPRISE_WAN_REP_QUEUESIZE = new GroupProperty(config, PROP_ENTERPRISE_WAN_REP_QUEUESIZE, "100000");
-        CLIENT_MAX_NO_HEARTBEAT_SECONDS = new GroupProperty(config, PROP_CLIENT_MAX_NO_HEARTBEAT_SECONDS, "60");
+        CLIENT_HEARTBEAT_TIMEOUT_SECONDS = new GroupProperty(config, PROP_CLIENT_MAX_NO_HEARTBEAT_SECONDS, "300");
+        MIGRATION_MIN_DELAY_ON_MEMBER_REMOVED_SECONDS
+                = new GroupProperty(config, PROP_MIGRATION_MIN_DELAY_ON_MEMBER_REMOVED_SECONDS, "5");
     }
 
     public static class GroupProperty {

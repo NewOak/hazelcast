@@ -16,7 +16,7 @@
 
 package com.hazelcast.client.proxy;
 
-import com.hazelcast.client.ClientRequest;
+import com.hazelcast.client.impl.client.ClientRequest;
 import com.hazelcast.client.spi.ClientProxy;
 import com.hazelcast.concurrent.atomicreference.client.GetRequest;
 import com.hazelcast.concurrent.atomicreference.client.ApplyRequest;
@@ -40,8 +40,8 @@ public class ClientAtomicReferenceProxy<E> extends ClientProxy implements IAtomi
     private final String name;
     private volatile Data key;
 
-    public ClientAtomicReferenceProxy(String instanceName, String serviceName, String objectId) {
-        super(instanceName, serviceName, objectId);
+    public ClientAtomicReferenceProxy(String serviceName, String objectId) {
+        super(serviceName, objectId);
         this.name = objectId;
     }
 

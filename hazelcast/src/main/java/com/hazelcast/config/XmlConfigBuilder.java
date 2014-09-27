@@ -27,7 +27,6 @@ import com.hazelcast.nio.ClassLoaderUtil;
 import com.hazelcast.nio.IOUtil;
 import com.hazelcast.spi.ServiceConfigurationParser;
 import com.hazelcast.util.ExceptionUtil;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
@@ -36,7 +35,6 @@ import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -60,7 +58,6 @@ public class XmlConfigBuilder extends AbstractXmlConfigHelper implements ConfigB
 
     private static final int DEFAULT_VALUE = 5;
     private static final int THOUSAND_FACTOR = 5;
-    private static final int FIVE = 5;
 
     private Config config;
     private InputStream in;
@@ -137,7 +134,7 @@ public class XmlConfigBuilder extends AbstractXmlConfigHelper implements ConfigB
         try {
             parse(config);
         } catch (Exception e) {
-            throw new HazelcastException(e);
+            throw new HazelcastException(e.getMessage(), e);
         }
         return config;
     }
@@ -362,7 +359,10 @@ public class XmlConfigBuilder extends AbstractXmlConfigHelper implements ConfigB
     private void handleNetwork(final org.w3c.dom.Node node) throws Exception {
         for (org.w3c.dom.Node child : new IterableNodeList(node.getChildNodes())) {
             final String nodeName = cleanNodeName(child.getNodeName());
-            if ("port".equals(nodeName)) {
+            if ("reuse-address".equals(nodeName)) {
+                String value = getTextContent(child).trim();
+                config.getNetworkConfig().setReuseAddress(checkTrue(value));
+            } else if ("port".equals(nodeName)) {
                 handlePort(child);
             } else if ("outbound-ports".equals(nodeName)) {
                 handleOutboundPorts(child);
@@ -551,6 +551,9 @@ public class XmlConfigBuilder extends AbstractXmlConfigHelper implements ConfigB
                 azureConfig.setKeyStorePassword(value);
             }
         }
+
+        JoinConfig joinConfig = config.getNetworkConfig().getJoin();
+        joinConfig.verify();
     }
 
     private void handleAWS(Node node) {
@@ -867,6 +870,9 @@ public class XmlConfigBuilder extends AbstractXmlConfigHelper implements ConfigB
             } else if ("eviction-percentage".equals(nodeName)) {
                 mapConfig.setEvictionPercentage(getIntegerValue("eviction-percentage", value,
                         MapConfig.DEFAULT_EVICTION_PERCENTAGE));
+            } else if ("min-eviction-check-millis".equals(nodeName)) {
+                mapConfig.setMinEvictionCheckMillis(getLongValue("min-eviction-check-millis", value,
+                        MapConfig.DEFAULT_MIN_EVICTION_CHECK_MILLIS));
             } else if ("time-to-live-seconds".equals(nodeName)) {
                 mapConfig.setTimeToLiveSeconds(getIntegerValue("time-to-live-seconds", value,
                         MapConfig.DEFAULT_TTL_SECONDS));
@@ -884,6 +890,8 @@ public class XmlConfigBuilder extends AbstractXmlConfigHelper implements ConfigB
                 mapConfig.setReadBackupData(checkTrue(value));
             } else if ("statistics-enabled".equals(nodeName)) {
                 mapConfig.setStatisticsEnabled(checkTrue(value));
+            } else if ("optimize-queries".equals(nodeName)) {
+                mapConfig.setOptimizeQueries(checkTrue(value));
             } else if ("wan-replication-ref".equals(nodeName)) {
                 mapWanReplicationRefHandle(n, mapConfig);
             } else if ("indexes".equals(nodeName)) {
@@ -1161,7 +1169,7 @@ public class XmlConfigBuilder extends AbstractXmlConfigHelper implements ConfigB
 
         final Node intervalNode = attrs.getNamedItem("update-interval");
         final int interval = intervalNode != null ? getIntegerValue("update-interval",
-                getTextContent(intervalNode), DEFAULT_VALUE) : FIVE;
+                getTextContent(intervalNode), ManagementCenterConfig.UPDATE_INTERVAL) : ManagementCenterConfig.UPDATE_INTERVAL;
 
         final String url = getTextContent(node);
         ManagementCenterConfig managementCenterConfig = config.getManagementCenterConfig();

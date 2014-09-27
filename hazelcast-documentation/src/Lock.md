@@ -3,7 +3,7 @@
 ## Lock
 
 ILock is the distributed implementation of `java.util.concurrent.locks.Lock`. Meaning if you lock on an ILock, the critical
-section that it guards is guaranteed to be executed by only one thread in entire cluster. Even though locks are great for synchronization, they can lead to problems if not used properly.
+section that it guards is guaranteed to be executed by only one thread in entire cluster. Even though locks are great for synchronization, they can lead to problems if not used properly. And also please note that Hazelcast Lock does not support fairness.
 
 A few warnings when using locks:
 
@@ -73,55 +73,9 @@ locks can be available for live members immediately.
 two nodes from different clusters can acquire the same lock.
 For more information on places where split brain can be handled, please see [Split Brain](#how-is-split-brain-syndrome-handled).
 
-### ICondition
+- Locks are not automatically removed. If a lock is not used anymore, Hazelcast will not automatically garbage collect the lock and
+this can lead to an OutOfMemoryError. So if you create locks on the fly, make sure they are destroyed.
 
-ICondition is the distributed implementation of `notify`, `notifyAll` and `wait` operations on Java object . It can be used to synchronize
-threads  across the cluster. More specifically, it is used when a thread's work  depends on another thread's output. A good example
-can be producer/consumer methodology. 
-
-Please see the below code snippets for a sample producer/consumer implementation.
-
-**Producer thread:**
-
-```java
-HazelcastInstance hazelcastInstance = Hazelcast.newHazelcastInstance();
-Lock lock = hazelcastInstance.getLock( "myLockId" );
-ICondition condition = lock.newCondition( "myConditionId" );
-
-lock.lock();
-try {
-  while ( !shouldProduce() ) {
-    condition.await(); // frees the lock and waits for signal
-                       // when it wakes up it re-acquires the lock
-                       // if available or waits for it to become
-                       // available
-  }
-  produce();
-  condition.signalAll();
-} finally {
-  lock.unlock();
-}
-```
-
-**Consumer thread:**
-       
-```java       
-HazelcastInstance hazelcastInstance = Hazelcast.newHazelcastInstance();
-Lock lock = hazelcastInstance.getLock( "myLockId" );
-ICondition condition = lock.newCondition( "myConditionId" );
-
-lock.lock();
-try {
-  while ( !canConsume() ) {
-    condition.await(); // frees the lock and waits for signal
-                       // when it wakes up it re-acquires the lock if 
-                       // available or waits for it to become
-                       // available
-  }
-  consume();
-  condition.signalAll();
-} finally {
-  lock.unlock();
-}
-```
+- Hazelcast IMap also provides a locking support on the entry level using the method `IMap.lock(key)`. Although the same infrastructure 
+is being used, `IMap.lock(key)` is not an ILock and it is not possible to expose it directly.
 

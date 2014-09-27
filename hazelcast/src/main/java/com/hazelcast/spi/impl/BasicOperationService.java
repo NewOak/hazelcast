@@ -25,6 +25,7 @@ import com.hazelcast.instance.OutOfMemoryErrorDispatcher;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.Connection;
+import com.hazelcast.nio.IOUtil;
 import com.hazelcast.nio.Packet;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.partition.InternalPartition;
@@ -52,6 +53,7 @@ import com.hazelcast.spi.exception.PartitionMigratingException;
 import com.hazelcast.spi.exception.WrongTargetException;
 import com.hazelcast.spi.impl.PartitionIteratingOperation.PartitionResponse;
 import com.hazelcast.util.Clock;
+import com.hazelcast.util.ExceptionUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -189,6 +191,11 @@ final class BasicOperationService implements InternalOperationService {
     }
 
     @Override
+    public void execute(Runnable task, int partitionId) {
+        scheduler.execute(task, partitionId);
+    }
+
+    @Override
     public InvocationBuilder createInvocationBuilder(String serviceName, Operation op, int partitionId) {
         if (partitionId < 0) {
             throw new IllegalArgumentException("Partition id cannot be negative!");
@@ -206,7 +213,7 @@ final class BasicOperationService implements InternalOperationService {
 
     @PrivateApi
     @Override
-    public void receive(final Packet packet) {
+    public void executeOperation(final Packet packet) {
         scheduler.execute(packet);
     }
 
@@ -346,7 +353,7 @@ final class BasicOperationService implements InternalOperationService {
         return nodeEngine.send(packet, connection);
     }
 
-    public long registerInvocation(BasicInvocation invocation) {
+    public void registerInvocation(BasicInvocation invocation) {
         long callId = callIdGen.getAndIncrement();
         Operation op = invocation.op;
         if (op.getCallId() != 0) {
@@ -355,11 +362,10 @@ final class BasicOperationService implements InternalOperationService {
 
         invocations.put(callId, invocation);
         setCallId(invocation.op, callId);
-        return callId;
     }
 
-    public void deregisterInvocation(long id) {
-        invocations.remove(id);
+    public void deregisterInvocation(BasicInvocation invocation) {
+        invocations.remove(invocation.op.getCallId());
     }
 
     @PrivateApi
@@ -369,7 +375,7 @@ final class BasicOperationService implements InternalOperationService {
 
     @PrivateApi
     boolean isOperationExecuting(Address callerAddress, String callerUuid, long operationCallId) {
-        return executingCalls.containsKey(new RemoteCallKey(callerAddress, callerUuid, operationCallId));
+        return executingCalls.containsKey(new RemoteCallKey(callerAddress, operationCallId));
     }
 
     @PrivateApi
@@ -408,7 +414,11 @@ final class BasicOperationService implements InternalOperationService {
         logger.finest("Stopping operation threads...");
         final Object response = new HazelcastInstanceNotActiveException();
         for (BasicInvocation invocation : invocations.values()) {
-            invocation.notify(response);
+            try {
+                invocation.notify(response);
+            } catch (Throwable e) {
+                logger.warning(invocation + " could not be notified with shutdown message -> " + e.getMessage());
+            }
         }
         invocations.clear();
         scheduler.shutdown();
@@ -565,7 +575,10 @@ final class BasicOperationService implements InternalOperationService {
         private void notifyRemoteCall(NormalResponse response) {
             BasicInvocation invocation = invocations.get(response.getCallId());
             if (invocation == null) {
-                throw new HazelcastException("No invocation for response:" + response);
+                if (nodeEngine.isActive()) {
+                    throw new HazelcastException("No invocation for response: " + response);
+                }
+                return;
             }
 
             invocation.notify(response);
@@ -594,17 +607,42 @@ final class BasicOperationService implements InternalOperationService {
             }
         }
 
-        private Operation loadOperation(Packet packet) {
+        private Operation loadOperation(Packet packet) throws Exception {
             Connection conn = packet.getConn();
             Address caller = conn.getEndPoint();
             Data data = packet.getData();
-            Object object = nodeEngine.toObject(data);
-            Operation op = (Operation) object;
-            op.setNodeEngine(nodeEngine);
-            setCallerAddress(op, caller);
-            setConnection(op, conn);
-            setRemoteResponseHandler(nodeEngine, op);
-            return op;
+
+            try {
+                Object object = nodeEngine.toObject(data);
+                Operation op = (Operation) object;
+                op.setNodeEngine(nodeEngine);
+                setCallerAddress(op, caller);
+                setConnection(op, conn);
+                setCallerUuidIfNotSet(caller, op);
+                setRemoteResponseHandler(nodeEngine, op);
+                return op;
+            } catch (Throwable throwable) {
+                // If exception happens we need to extract the callId from the bytes directly!
+                long callId = IOUtil.extractOperationCallId(data, node.getSerializationService());
+                RemoteOperationExceptionHandler exceptionHandler = new RemoteOperationExceptionHandler(callId);
+                exceptionHandler.setNodeEngine(nodeEngine);
+                exceptionHandler.setCallerAddress(caller);
+                exceptionHandler.setConnection(conn);
+                ResponseHandlerFactory.setRemoteResponseHandler(nodeEngine, exceptionHandler);
+                operationHandler.handleOperationError(exceptionHandler, throwable);
+                throw ExceptionUtil.rethrow(throwable);
+            }
+        }
+
+        private void setCallerUuidIfNotSet(Address caller, Operation op) {
+            if (op.getCallerUuid() != null) {
+                return;
+
+            }
+            MemberImpl callerMember = node.clusterService.getMember(caller);
+            if (callerMember != null) {
+                op.setCallerUuid(callerMember.getUuid());
+            }
         }
 
         private boolean ensureValidMember(Operation op) {
@@ -796,13 +834,13 @@ final class BasicOperationService implements InternalOperationService {
             }
         }
 
-        private void handleOperationError(Operation op, Throwable e) {
+        private void handleOperationError(RemotePropagatable remotePropagatable, Throwable e) {
             if (e instanceof OutOfMemoryError) {
                 OutOfMemoryErrorDispatcher.onOutOfMemory((OutOfMemoryError) e);
             }
-            op.logError(e);
-            ResponseHandler responseHandler = op.getResponseHandler();
-            if (op.returnsResponse() && responseHandler != null) {
+            remotePropagatable.logError(e);
+            ResponseHandler responseHandler = remotePropagatable.getResponseHandler();
+            if (remotePropagatable.returnsResponse() && responseHandler != null) {
                 try {
                     if (node.isActive()) {
                         responseHandler.sendResponse(e);
@@ -810,7 +848,7 @@ final class BasicOperationService implements InternalOperationService {
                         responseHandler.sendResponse(new HazelcastInstanceNotActiveException());
                     }
                 } catch (Throwable t) {
-                    logger.warning("While sending op error... op: " + op + ", error: " + e, t);
+                    logger.warning("While sending op error... op: " + remotePropagatable + ", error: " + e, t);
                 }
             }
         }
@@ -928,28 +966,18 @@ final class BasicOperationService implements InternalOperationService {
 
     private static final class RemoteCallKey {
         private final long time = Clock.currentTimeMillis();
-        // human readable caller
         private final Address callerAddress;
-        private final String callerUuid;
         private final long callId;
 
-        private RemoteCallKey(Address callerAddress, String callerUuid, long callId) {
-            if (callerUuid == null) {
-                throw new IllegalArgumentException("Caller UUID is required!");
-            }
-            this.callerAddress = callerAddress;
+        private RemoteCallKey(Address callerAddress, long callId) {
             if (callerAddress == null) {
                 throw new IllegalArgumentException("Caller address is required!");
             }
-            this.callerUuid = callerUuid;
+            this.callerAddress = callerAddress;
             this.callId = callId;
         }
 
         private RemoteCallKey(final Operation op) {
-            callerUuid = op.getCallerUuid();
-            if (callerUuid == null) {
-                throw new IllegalArgumentException("Caller UUID is required! -> " + op);
-            }
             callerAddress = op.getCallerAddress();
             if (callerAddress == null) {
                 throw new IllegalArgumentException("Caller address is required! -> " + op);
@@ -969,7 +997,7 @@ final class BasicOperationService implements InternalOperationService {
             if (callId != callKey.callId) {
                 return false;
             }
-            if (!callerUuid.equals(callKey.callerUuid)) {
+            if (!callerAddress.equals(callKey.callerAddress)) {
                 return false;
             }
             return true;
@@ -977,7 +1005,7 @@ final class BasicOperationService implements InternalOperationService {
 
         @Override
         public int hashCode() {
-            int result = callerUuid.hashCode();
+            int result = callerAddress.hashCode();
             result = 31 * result + (int) (callId ^ (callId >>> 32));
             return result;
         }
@@ -987,7 +1015,6 @@ final class BasicOperationService implements InternalOperationService {
             final StringBuilder sb = new StringBuilder();
             sb.append("RemoteCallKey");
             sb.append("{callerAddress=").append(callerAddress);
-            sb.append(", callerUuid=").append(callerUuid);
             sb.append(", callId=").append(callId);
             sb.append(", time=").append(time);
             sb.append('}');

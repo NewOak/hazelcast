@@ -131,7 +131,7 @@ public class SocketConnector implements Runnable {
             connectionManager.interceptSocket(socketChannel.socket(), false);
 
             socketChannelWrapper.configureBlocking(false);
-            TcpIpConnection connection = connectionManager.assignSocketChannel(socketChannelWrapper);
+            TcpIpConnection connection = connectionManager.assignSocketChannel(socketChannelWrapper, address);
             connection.getWriteHandler().setProtocol(Protocols.CLUSTER);
             connectionManager.sendBindRequest(connection, address, true);
         } catch (Exception e) {
@@ -200,6 +200,5 @@ public class SocketConnector implements Runnable {
 
     private void log(Level level, String message) {
         logger.log(level, message);
-        connectionManager.ioService.getSystemLogService().logConnection(message);
     }
 }

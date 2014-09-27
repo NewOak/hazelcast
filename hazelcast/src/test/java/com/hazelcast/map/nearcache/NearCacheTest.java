@@ -25,15 +25,15 @@ import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.instance.TestUtil;
-import com.hazelcast.map.MapService;
-import com.hazelcast.map.NearCache;
+import com.hazelcast.map.impl.MapService;
+import com.hazelcast.map.impl.NearCache;
 import com.hazelcast.monitor.NearCacheStats;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.TestHazelcastInstanceFactory;
-import com.hazelcast.test.annotation.ProblematicTest;
+import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -46,10 +46,13 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
-@Category(ProblematicTest.class)
+@Category(QuickTest.class)
 public class NearCacheTest extends HazelcastTestSupport {
 
     @Test
@@ -248,7 +251,6 @@ public class NearCacheTest extends HazelcastTestSupport {
     }
 
     @Test
-    @Category(ProblematicTest.class)
     public void testNearCacheInvalidationByUsingMapPutAll() {
         int n = 3;
         String mapName = "test";

@@ -22,14 +22,14 @@ import com.hazelcast.config.ReplicatedMapConfig;
 import com.hazelcast.core.EntryEventType;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ReplicatedMap;
-import com.hazelcast.replicatedmap.record.AbstractReplicatedRecordStore;
-import com.hazelcast.replicatedmap.record.ReplicatedRecord;
-import com.hazelcast.replicatedmap.record.ReplicationPublisher;
+import com.hazelcast.replicatedmap.impl.ReplicatedMapProxy;
+import com.hazelcast.replicatedmap.impl.record.AbstractReplicatedRecordStore;
+import com.hazelcast.replicatedmap.impl.record.ReplicatedRecord;
+import com.hazelcast.replicatedmap.impl.record.ReplicationPublisher;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.TestHazelcastInstanceFactory;
 import com.hazelcast.test.WatchedOperationExecutor;
-import com.hazelcast.test.annotation.ProblematicTest;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -207,7 +207,6 @@ public class ReplicatedMapTest
     }
 
     @Test
-    @Category(ProblematicTest.class)
     public void testAddTtlObjectDelay0()
             throws Exception {
 
@@ -215,7 +214,6 @@ public class ReplicatedMapTest
     }
 
     @Test
-    @Category(ProblematicTest.class)
     public void testAddTtlObjectDelayDefault()
             throws Exception {
 
@@ -223,7 +221,6 @@ public class ReplicatedMapTest
     }
 
     @Test
-    @Category(ProblematicTest.class)
     public void testAddTtlBinaryDelay0()
             throws Exception {
 
@@ -231,7 +228,6 @@ public class ReplicatedMapTest
     }
 
     @Test
-    @Category(ProblematicTest.class)
     public void testAddTtlBinaryDelayDefault()
             throws Exception {
 
@@ -488,7 +484,6 @@ public class ReplicatedMapTest
     }
 
     @Test
-    @Category(ProblematicTest.class)
     public void testRemoveObjectDelayDefault()
             throws Exception {
 
@@ -496,7 +491,6 @@ public class ReplicatedMapTest
     }
 
     @Test
-    @Category(ProblematicTest.class)
     public void testRemoveBinaryDelay0()
             throws Exception {
 
@@ -504,7 +498,6 @@ public class ReplicatedMapTest
     }
 
     @Test
-    @Category(ProblematicTest.class)
     public void testRemoveBinaryDelayDefault()
             throws Exception {
 

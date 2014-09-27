@@ -150,6 +150,12 @@ final class TestNodeRegistry {
                 }
             }
 
+            @Override
+            public boolean registerConnection(Address address, Connection connection) {
+                mapConnections.put(address, connection);
+                return true;
+            }
+
             public void start() {
             }
 
@@ -322,6 +328,15 @@ final class TestNodeRegistry {
 
             public String toString() {
                 return "MockJoiner";
+            }
+
+            @Override
+            public void blacklist(Address callerAddress) {
+            }
+
+            @Override
+            public boolean isBlacklisted(Address address) {
+                return false;
             }
         }
     }

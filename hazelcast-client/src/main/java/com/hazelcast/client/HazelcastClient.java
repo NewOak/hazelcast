@@ -23,6 +23,9 @@ import com.hazelcast.client.config.XmlClientConfigBuilder;
 import com.hazelcast.client.connection.AddressTranslator;
 import com.hazelcast.client.connection.ClientConnectionManager;
 import com.hazelcast.client.connection.nio.ClientConnectionManagerImpl;
+import com.hazelcast.client.impl.client.DistributedObjectInfo;
+import com.hazelcast.client.impl.client.GetDistributedObjectsRequest;
+import com.hazelcast.client.impl.client.txn.ClientTransactionManager;
 import com.hazelcast.client.proxy.ClientClusterProxy;
 import com.hazelcast.client.proxy.PartitionServiceProxy;
 import com.hazelcast.client.spi.ClientClusterService;
@@ -38,7 +41,6 @@ import com.hazelcast.client.spi.impl.ClientInvocationServiceImpl;
 import com.hazelcast.client.spi.impl.ClientListenerServiceImpl;
 import com.hazelcast.client.spi.impl.ClientPartitionServiceImpl;
 import com.hazelcast.client.spi.impl.DefaultAddressTranslator;
-import com.hazelcast.client.txn.ClientTransactionManager;
 import com.hazelcast.client.util.RoundRobinLB;
 import com.hazelcast.collection.list.ListService;
 import com.hazelcast.collection.set.SetService;
@@ -74,26 +76,26 @@ import com.hazelcast.core.MultiMap;
 import com.hazelcast.core.PartitionService;
 import com.hazelcast.core.PartitioningStrategy;
 import com.hazelcast.core.ReplicatedMap;
-import com.hazelcast.executor.DistributedExecutorService;
+import com.hazelcast.executor.impl.DistributedExecutorService;
 import com.hazelcast.instance.GroupProperties;
 import com.hazelcast.instance.OutOfMemoryErrorDispatcher;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.logging.LoggingService;
-import com.hazelcast.map.MapService;
+import com.hazelcast.map.impl.MapService;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.impl.MapReduceService;
-import com.hazelcast.multimap.MultiMapService;
+import com.hazelcast.multimap.impl.MultiMapService;
 import com.hazelcast.nio.ClassLoaderUtil;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.SerializationService;
 import com.hazelcast.nio.serialization.SerializationServiceBuilder;
 import com.hazelcast.nio.serialization.SerializationServiceImpl;
 import com.hazelcast.partition.strategy.DefaultPartitioningStrategy;
-import com.hazelcast.queue.QueueService;
-import com.hazelcast.replicatedmap.ReplicatedMapService;
+import com.hazelcast.queue.impl.QueueService;
+import com.hazelcast.replicatedmap.impl.ReplicatedMapService;
 import com.hazelcast.spi.impl.SerializableCollection;
-import com.hazelcast.topic.TopicService;
+import com.hazelcast.topic.impl.TopicService;
 import com.hazelcast.transaction.TransactionContext;
 import com.hazelcast.transaction.TransactionException;
 import com.hazelcast.transaction.TransactionOptions;
@@ -258,7 +260,7 @@ public final class HazelcastClient implements HazelcastInstance {
         partitionService.start();
     }
 
-    ClientConnectionManagerImpl createClientConnectionManager() {
+    ClientConnectionManager createClientConnectionManager() {
         final ClientAwsConfig awsConfig = config.getNetworkConfig().getAwsConfig();
         AddressTranslator addressTranslator;
         if (awsConfig != null && awsConfig.isEnabled()) {
@@ -507,6 +509,7 @@ public final class HazelcastClient implements HazelcastInstance {
 
     void doShutdown() {
         CLIENTS.remove(id);
+        proxyManager.destroy();
         executionService.shutdown();
         partitionService.stop();
         clusterService.stop();
@@ -514,7 +517,6 @@ public final class HazelcastClient implements HazelcastInstance {
         connectionManager.shutdown();
         invocationService.shutdown();
         listenerService.shutdown();
-        proxyManager.destroy();
         serializationService.destroy();
     }
 }

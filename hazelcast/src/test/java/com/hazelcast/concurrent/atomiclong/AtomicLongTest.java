@@ -16,18 +16,14 @@
 
 package com.hazelcast.concurrent.atomiclong;
 
-import com.hazelcast.config.Config;
-import com.hazelcast.core.IFunction;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IAtomicLong;
+import com.hazelcast.core.IFunction;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.TestHazelcastInstanceFactory;
 import com.hazelcast.test.annotation.ClientCompatibleTest;
-import com.hazelcast.test.annotation.ProblematicTest;
 import com.hazelcast.test.annotation.QuickTest;
-import com.hazelcast.test.annotation.Repeat;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -35,10 +31,9 @@ import org.junit.runner.RunWith;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
 @Category(QuickTest.class)
@@ -46,23 +41,81 @@ public class AtomicLongTest extends HazelcastTestSupport {
 
     @Test
     @ClientCompatibleTest
-    public void testSimpleAtomicLong() {
-        HazelcastInstance hazelcastInstance = createHazelcastInstance();
-        IAtomicLong an = hazelcastInstance.getAtomicLong("testAtomicLong");
-        assertEquals(0, an.get());
-        assertEquals(-1, an.decrementAndGet());
-        assertEquals(0, an.incrementAndGet());
-        assertEquals(1, an.incrementAndGet());
-        assertEquals(2, an.incrementAndGet());
-        assertEquals(1, an.decrementAndGet());
-        assertEquals(1, an.getAndSet(23));
-        assertEquals(28, an.addAndGet(5));
-        assertEquals(28, an.get());
-        assertEquals(28, an.getAndAdd(-3));
-        assertEquals(24, an.decrementAndGet());
-        Assert.assertFalse(an.compareAndSet(23, 50));
-        assertTrue(an.compareAndSet(24, 50));
-        assertTrue(an.compareAndSet(50, 0));
+    public void testSet(){
+        HazelcastInstance hzInstance = createHazelcastInstance();
+        IAtomicLong atomicNumber = hzInstance.getAtomicLong(randomString());
+        atomicNumber.set(271);
+        assertEquals(271,atomicNumber.get());
+    }
+
+    @Test
+    @ClientCompatibleTest
+    public void testGet(){
+        HazelcastInstance hzInstance = createHazelcastInstance();
+        IAtomicLong atomicNumber = hzInstance.getAtomicLong(randomString());
+        assertEquals(0,atomicNumber.get());
+    }
+
+    @Test
+    @ClientCompatibleTest
+    public void testDecrementAndGet(){
+        HazelcastInstance hzInstance = createHazelcastInstance();
+        IAtomicLong atomicNumber = hzInstance.getAtomicLong(randomString());
+        assertEquals(-1,atomicNumber.decrementAndGet());
+        assertEquals(-2,atomicNumber.decrementAndGet());
+    }
+
+    @Test
+    @ClientCompatibleTest
+    public void testIncrementAndGet(){
+        HazelcastInstance hzInstance = createHazelcastInstance();
+        IAtomicLong atomicNumber = hzInstance.getAtomicLong(randomString());
+        assertEquals(1,atomicNumber.incrementAndGet());
+        assertEquals(2,atomicNumber.incrementAndGet());
+    }
+
+    @Test
+    @ClientCompatibleTest
+    public void testGetAndSet(){
+        HazelcastInstance hzInstance = createHazelcastInstance();
+        IAtomicLong atomicNumber = hzInstance.getAtomicLong(randomString());
+        assertEquals(0,atomicNumber.getAndSet(271));
+        assertEquals(271,atomicNumber.get());
+    }
+
+    @Test
+    @ClientCompatibleTest
+    public void testAddAndGet(){
+        HazelcastInstance hzInstance = createHazelcastInstance();
+        IAtomicLong atomicNumber = hzInstance.getAtomicLong(randomString());
+        assertEquals(271,atomicNumber.addAndGet(271));
+    }
+
+    @Test                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+    @ClientCompatibleTest
+    public void testGetAndAdd(){
+        HazelcastInstance hzInstance = createHazelcastInstance();
+        IAtomicLong atomicNumber = hzInstance.getAtomicLong(randomString());
+        assertEquals(0,atomicNumber.getAndAdd(271));
+        assertEquals(271,atomicNumber.get());
+    }
+
+    @Test
+    @ClientCompatibleTest
+    public void testCompareAndSet_whenSuccess(){
+        HazelcastInstance hzInstance = createHazelcastInstance();
+        IAtomicLong atomicNumber = hzInstance.getAtomicLong(randomString());
+        assertTrue(atomicNumber.compareAndSet(0, 271));
+        assertEquals(271,atomicNumber.get());
+    }
+
+    @Test
+    @ClientCompatibleTest
+    public void testCompareAndSet_whenNotSuccess(){
+        HazelcastInstance hzInstance = createHazelcastInstance();
+        IAtomicLong atomicNumber = hzInstance.getAtomicLong(randomString());
+        assertFalse(atomicNumber.compareAndSet(172, 0));
+        assertEquals(0,atomicNumber.get());
     }
 
     @Test
@@ -124,20 +177,31 @@ public class AtomicLongTest extends HazelcastTestSupport {
             for (int i = 0; i < total / parallel; i++) {
                 final HazelcastInstance[] instances = new HazelcastInstance[parallel];
                 final CountDownLatch countDownLatch = new CountDownLatch(parallel);
+                final AtomicInteger exceptionCount = new AtomicInteger(0);
                 for (int j = 0; j < parallel; j++) {
                     final int id = j;
                     ex.execute(new Runnable() {
                         public void run() {
-                            instances[id] = nodeFactory.newHazelcastInstance();
-                            instances[id].getAtomicLong(name).incrementAndGet();
-                            countDownLatch.countDown();
+                            try {
+                                instances[id] = nodeFactory.newHazelcastInstance();
+                                instances[id].getAtomicLong(name).incrementAndGet();
+                            } catch (Exception e) {
+                                exceptionCount.incrementAndGet();
+                                e.printStackTrace();
+                            } finally {
+                                countDownLatch.countDown();
+                            }
                         }
                     });
                 }
-                assertTrue(countDownLatch.await(1, TimeUnit.MINUTES));
+                assertOpenEventually(countDownLatch);
 
+                // if there is an exception while incrementing in parallel threads, find number of exceptions
+                // and subtract the number from expectedValue.
+                final int thrownExceptionCount = exceptionCount.get();
+                final long expectedValue = (long) 100 + (i + 1) * parallel - thrownExceptionCount;
                 IAtomicLong newAtomicLong = instance.getAtomicLong(name);
-                assertEquals((long) 100 + (i + 1) * parallel, newAtomicLong.get());
+                assertEquals(expectedValue, newAtomicLong.get());
                 instance.shutdown();
                 instance = instances[0];
             }
@@ -180,119 +244,119 @@ public class AtomicLongTest extends HazelcastTestSupport {
         assertEquals(1, ref.get());
     }
 
-   @Test(expected = IllegalArgumentException.class)
-   @ClientCompatibleTest
-   public void alter_whenCalledWithNullFunction() {
-       HazelcastInstance hazelcastInstance = createHazelcastInstance();
-       IAtomicLong ref = hazelcastInstance.getAtomicLong("alter_whenCalledWithNullFunction");
+    @Test(expected = IllegalArgumentException.class)
+    @ClientCompatibleTest
+    public void alter_whenCalledWithNullFunction() {
+        HazelcastInstance hazelcastInstance = createHazelcastInstance();
+        IAtomicLong ref = hazelcastInstance.getAtomicLong("alter_whenCalledWithNullFunction");
 
-       ref.alter(null);
-   }
+        ref.alter(null);
+    }
 
-   @Test
-   @ClientCompatibleTest
-   public void alter_whenException() {
-       HazelcastInstance hazelcastInstance = createHazelcastInstance();
-       IAtomicLong ref = hazelcastInstance.getAtomicLong("alter_whenException");
-       ref.set(10);
+    @Test
+    @ClientCompatibleTest
+    public void alter_whenException() {
+        HazelcastInstance hazelcastInstance = createHazelcastInstance();
+        IAtomicLong ref = hazelcastInstance.getAtomicLong("alter_whenException");
+        ref.set(10);
 
-       try {
-           ref.alter(new FailingFunction());
-           fail();
-       } catch (WoohaaException expected) {
-       }
+        try {
+            ref.alter(new FailingFunction());
+            fail();
+        } catch (WoohaaException expected) {
+        }
 
-       assertEquals(10, ref.get());
-   }
+        assertEquals(10, ref.get());
+    }
 
-   @Test
-   @ClientCompatibleTest
-   public void alter() {
-       HazelcastInstance hazelcastInstance = createHazelcastInstance();
-       IAtomicLong ref = hazelcastInstance.getAtomicLong("alter");
+    @Test
+    @ClientCompatibleTest
+    public void alter() {
+        HazelcastInstance hazelcastInstance = createHazelcastInstance();
+        IAtomicLong ref = hazelcastInstance.getAtomicLong("alter");
 
-       ref.set(10);
-       ref.alter(new AddOneFunction());
-       assertEquals(11, ref.get());
+        ref.set(10);
+        ref.alter(new AddOneFunction());
+        assertEquals(11, ref.get());
 
-   }
+    }
 
-   @Test(expected = IllegalArgumentException.class)
-   @ClientCompatibleTest
-   public void alterAndGet_whenCalledWithNullFunction() {
-       HazelcastInstance hazelcastInstance = createHazelcastInstance();
-       IAtomicLong ref = hazelcastInstance.getAtomicLong("alterAndGet_whenCalledWithNullFunction");
+    @Test(expected = IllegalArgumentException.class)
+    @ClientCompatibleTest
+    public void alterAndGet_whenCalledWithNullFunction() {
+        HazelcastInstance hazelcastInstance = createHazelcastInstance();
+        IAtomicLong ref = hazelcastInstance.getAtomicLong("alterAndGet_whenCalledWithNullFunction");
 
-       ref.alterAndGet(null);
-   }
+        ref.alterAndGet(null);
+    }
 
-   @Test
-   @ClientCompatibleTest
-   public void alterAndGet_whenException() {
-       HazelcastInstance hazelcastInstance = createHazelcastInstance();
-       IAtomicLong ref = hazelcastInstance.getAtomicLong("alterAndGet_whenException");
-       ref.set(10);
+    @Test
+    @ClientCompatibleTest
+    public void alterAndGet_whenException() {
+        HazelcastInstance hazelcastInstance = createHazelcastInstance();
+        IAtomicLong ref = hazelcastInstance.getAtomicLong("alterAndGet_whenException");
+        ref.set(10);
 
-       try {
-           ref.alterAndGet(new FailingFunction());
-           fail();
-       } catch (WoohaaException expected) {
-       }
+        try {
+            ref.alterAndGet(new FailingFunction());
+            fail();
+        } catch (WoohaaException expected) {
+        }
 
-       assertEquals(10, ref.get());
-   }
+        assertEquals(10, ref.get());
+    }
 
-   @Test
-   @ClientCompatibleTest
-   public void alterAndGet() {
-       HazelcastInstance hazelcastInstance = createHazelcastInstance();
-       IAtomicLong ref = hazelcastInstance.getAtomicLong("alterAndGet");
+    @Test
+    @ClientCompatibleTest
+    public void alterAndGet() {
+        HazelcastInstance hazelcastInstance = createHazelcastInstance();
+        IAtomicLong ref = hazelcastInstance.getAtomicLong("alterAndGet");
 
-       ref.set(10);
-       assertEquals(11, ref.alterAndGet(new AddOneFunction()));
-       assertEquals(11, ref.get());
-  }
+        ref.set(10);
+        assertEquals(11, ref.alterAndGet(new AddOneFunction()));
+        assertEquals(11, ref.get());
+    }
 
-   @Test(expected = IllegalArgumentException.class)
-   @ClientCompatibleTest
-   public void getAndAlter_whenCalledWithNullFunction() {
-       HazelcastInstance hazelcastInstance = createHazelcastInstance();
-       IAtomicLong ref = hazelcastInstance.getAtomicLong("getAndAlter_whenCalledWithNullFunction");
+    @Test(expected = IllegalArgumentException.class)
+    @ClientCompatibleTest
+    public void getAndAlter_whenCalledWithNullFunction() {
+        HazelcastInstance hazelcastInstance = createHazelcastInstance();
+        IAtomicLong ref = hazelcastInstance.getAtomicLong("getAndAlter_whenCalledWithNullFunction");
 
-       ref.getAndAlter(null);
-   }
+        ref.getAndAlter(null);
+    }
 
-   @Test
-   @ClientCompatibleTest
-   public void getAndAlter_whenException() {
-       HazelcastInstance hazelcastInstance = createHazelcastInstance();
-       IAtomicLong ref = hazelcastInstance.getAtomicLong("getAndAlter_whenException");
-       ref.set(10);
+    @Test
+    @ClientCompatibleTest
+    public void getAndAlter_whenException() {
+        HazelcastInstance hazelcastInstance = createHazelcastInstance();
+        IAtomicLong ref = hazelcastInstance.getAtomicLong("getAndAlter_whenException");
+        ref.set(10);
 
-       try {
-           ref.getAndAlter(new FailingFunction());
-           fail();
-       } catch (WoohaaException expected) {
-       }
+        try {
+            ref.getAndAlter(new FailingFunction());
+            fail();
+        } catch (WoohaaException expected) {
+        }
 
-       assertEquals(10, ref.get());
-   }
+        assertEquals(10, ref.get());
+    }
 
-   @Test
-   @ClientCompatibleTest
-   public void getAndAlter() {
-       HazelcastInstance hazelcastInstance = createHazelcastInstance();
-       IAtomicLong ref = hazelcastInstance.getAtomicLong("getAndAlter");
+    @Test
+    @ClientCompatibleTest
+    public void getAndAlter() {
+        HazelcastInstance hazelcastInstance = createHazelcastInstance();
+        IAtomicLong ref = hazelcastInstance.getAtomicLong("getAndAlter");
 
-       ref.set(10);
-       assertEquals(10, ref.getAndAlter(new AddOneFunction()));
-       assertEquals(11, ref.get());
-   }
+        ref.set(10);
+        assertEquals(10, ref.getAndAlter(new AddOneFunction()));
+        assertEquals(11, ref.get());
+    }
 
     private static class AddOneFunction implements IFunction<Long, Long> {
         @Override
         public Long apply(Long input) {
-            return input+1;
+            return input + 1;
         }
     }
 

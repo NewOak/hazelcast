@@ -16,7 +16,7 @@
 
 package com.hazelcast.client.proxy;
 
-import com.hazelcast.client.ClientRequest;
+import com.hazelcast.client.impl.client.ClientRequest;
 import com.hazelcast.client.spi.ClientClusterService;
 import com.hazelcast.client.spi.ClientProxy;
 import com.hazelcast.client.spi.EventHandler;
@@ -27,18 +27,18 @@ import com.hazelcast.core.MessageListener;
 import com.hazelcast.monitor.LocalTopicStats;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.SerializationService;
-import com.hazelcast.topic.client.AddMessageListenerRequest;
-import com.hazelcast.topic.client.PortableMessage;
-import com.hazelcast.topic.client.PublishRequest;
-import com.hazelcast.topic.client.RemoveMessageListenerRequest;
+import com.hazelcast.topic.impl.client.AddMessageListenerRequest;
+import com.hazelcast.topic.impl.client.PortableMessage;
+import com.hazelcast.topic.impl.client.PublishRequest;
+import com.hazelcast.topic.impl.client.RemoveMessageListenerRequest;
 
 public class ClientTopicProxy<E> extends ClientProxy implements ITopic<E> {
 
     private final String name;
     private volatile Data key;
 
-    public ClientTopicProxy(String instanceName, String serviceName, String objectId) {
-        super(instanceName, serviceName, objectId);
+    public ClientTopicProxy(String serviceName, String objectId) {
+        super(serviceName, objectId);
         this.name = objectId;
     }
 
@@ -64,6 +64,10 @@ public class ClientTopicProxy<E> extends ClientProxy implements ITopic<E> {
                 Member member = clusterService.getMember(event.getUuid());
                 Message<E> message = new Message<E>(name, messageObject, event.getPublishTime(), member);
                 listener.onMessage(message);
+            }
+
+            @Override
+            public void beforeListenerRegister() {
             }
 
             @Override

@@ -3,7 +3,12 @@
 
 If you are using Tomcat as your web container, please see our [Tomcat based Web Session Replication](#tomcat-based-web-session-replication).
 
+
 ### Filter Based Web Session Replication
+
+
+***Sample Code**: Please see our sample application for [Filter Based Web Session Replication](https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/filter-based-session-replication).*
+
 
 Assume that you have more than one web servers (A, B, C) with a load balancer in front of them. If server A goes down, your users on that server will be directed to one of the live servers (B or C), but their sessions will be lost.
 
@@ -166,13 +171,51 @@ Here are the steps to setup Hazelcast Session Clustering:
 
 It is that easy. All HTTP requests will go through Hazelcast `WebFilter` and it will put the session objects into Hazelcast distributed map if needed.
 
+### Spring Security Support
+
+***Sample Code**: Please see our sample application for [Spring Security Support](https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/spring-security).*
+
+If Spring based security is used for application, you should use `com.hazelcast.web.spring.SpringAwareWebFilter` instead of `com.hazelcast.web.WebFilter` in your filter definition.
+
+```xml
+...
+
+<filter>
+  <filter-name>hazelcast-filter</filter-name>
+  <filter-class>com.hazelcast.web.spring.SpringAwareWebFilter</filter-class>
+    ...
+</filter> 
+
+...
+```
+
+`SpringAwareWebFilter` notifies Spring by publishing events to Spring context and these events are used by `org.springframework.security.core.session.SessionRegistry` instance. 
+
+As like before, you must also define `com.hazelcast.web.SessionListener` in your `web.xml`. However, it is not needed to define `org.springframework.security.web.session.HttpSessionEventPublisher` in your `web.xml` as before, since `SpringAwareWebFilter` already informs Spring about session based events like create or destroy. 
+
+
+
+
 #### Client Mode vs. P2P Mode
 
 Hazelcast Session Replication works as P2P by default. You need to set `use-client` parameter to **true** to switch to Client/Server architecture. P2P mode is more flexible and requires no configuration in advance while in Client/Server architecture, clients need to connect to an existing Hazelcast Cluster. In case of connection problems, clients will try to reconnect to the cluster. Default retry count is 3.
 
 #### Caching Locally with `deferred-write`
 
-If the value for `deferred-write` is set as **true**, Hazelcast will cache the session locally and will update the local session on set or deletion of an attribute. Only at the end of request, it will update the distributed map with all the updates. So, it will not be updating the distributed map on each attribute update. It will only call it once at the end of request. It will be also caching it, i.e. whenever there is a read for the attribute, it will read it from the cache. If `deferred-write` is **false**, you will not have the attributes cached on any server.
+If the value for `deferred-write` is set as **true**, Hazelcast will cache the session locally and will update the local session on set or deletion of an attribute. Only at the end of request, it will update the distributed map with all the updates. So, it will not be updating the distributed map on each attribute update. It will only call it once at the end of request. It will be also caching it, i.e. whenever there is a read for the attribute, it will read it from the cache. 
+
+**Important note about `deferred-write=false` setting**:
+
+If `deferred-write` is **false**, you will not have local attribute cache as mentioned above. In this case, any update (i.e. `setAttribute`) on the session will directly be available in the cluster. One exception to this behavior is the changes to the session attribute objects. To update an attribute cluster wide, `setAttribute` has to be called after making changes to the attribute object.
+
+Following example explains how to update an attribute in the case of `deferred-write=false` setting: 
+
+```
+session.setAttribute("myKey", new ArrayList());
+List list1 = session.getAttribute("myKey");
+list1.add("myValue"); 
+session.setAttribute("myKey", list1); // changes updated in the cluster
+```
 
 #### SessionId Generation
 

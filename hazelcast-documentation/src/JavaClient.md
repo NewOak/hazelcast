@@ -1,6 +1,6 @@
 ## Java Client
 
-### Java Cient Overview
+### Java Client Overview
 
 Java client is the most full featured client. It is offered both with Hazelcast and Hazelcast Enterprise. Main idea behind the Java client is to provide the same Hazelcast functionality by proxying each operation through a Hazelcast node. 
 It can be used to access and change distributed data or listen distributed events of an already established Hazelcast cluster from another Java application. 
@@ -96,10 +96,10 @@ Client executes each operation through the already established connection to clu
 
 While sending the requests to related nodes, it is possible that operation fails due to various reasons. For any read only operations, you can have your client retrying to send the operation by enabling `redoOperation`. Please see [Redo Operation](#redo-operation).
 
-And, the number of retries is given with the property  `hazelcast.client.retry.count` in `ClientProperties`. It will resend the request as many as RETRY-COUNT then it will throw an exception. Please see [Client Properties](#client-properties).
+And, the number of retries is given with the property  `hazelcast.client.request.retry.count` in `ClientProperties`. It will resend the request as many as RETRY-COUNT then it will throw an exception. Please see [Client Properties](#client-properties).
 
 
-### Distributed Data Structures
+### Supported Distributed Data Structures
 
 Most of the Distributed Data Structures are supported by the client. Please check for the exceptions for the clients in other languages.
 
@@ -244,11 +244,11 @@ lifecycleService.shutdown();
 
 ```
 
-### Listeners
+### Client Listeners
 
 Listeners can be configured to listen to various event types on the client side. Global events not relating to any distributed object can be configured through [ListenerConfig](#listenerconfig). Whereas, distributed object listeners like map entry listeners or list item listeners should be configured through their proxies. You can refer to the related sections under each distributed data structure in this reference manual.
 
-### Transactions
+### Client Transactions
 
 Transactional distributed objects are supported on the client side. Please see [Transactions](#transactions) chapter on how to use them.
 
@@ -344,7 +344,8 @@ Socket interceptor has two steps. First, it will be initialized by the configure
 
 
 ```java
-SocketInterceptorConfig socketInterceptorConfig = clientConfig.getNetworkConfig().getSocketInterceptorConfig();
+SocketInterceptorConfig socketInterceptorConfig = clientConfig
+               .getNetworkConfig().getSocketInterceptorConfig();
 
 MyClientSocketInterceptor myClientSocketInterceptor = new MyClientSocketInterceptor();
 
@@ -355,7 +356,8 @@ socketInterceptorConfig.setImplementation(myClientSocketInterceptor);
 If you want to configure it with a class name instead of an instance;
 
 ```java
-SocketInterceptorConfig socketInterceptorConfig = clientConfig.getNetworkConfig().getSocketInterceptorConfig();
+SocketInterceptorConfig socketInterceptorConfig = clientConfig
+            .getNetworkConfig().getSocketInterceptorConfig();
 
 MyClientSocketInterceptor myClientSocketInterceptor = new MyClientSocketInterceptor();
 
@@ -441,23 +443,21 @@ clientConfig.getNetworkConfig().setAwsConfig( clientAwsConfig );
 HazelcastInstance client = HazelcastClient.newHazelcastClient( clientConfig );
 ```
 
-***Note:*** *If *`inside-aws`* parameter is not set, private addresses of nodes will always be converted to public addresses. And, client will use public addresses to connect to nodes. In order to use private adresses, you should set it to *`true`*. Also note that, when connecting outside from AWS, setting *`inside-aws`* parameter to *`true`* will cause the client not to be able to reach to the nodes.*
+***Note:*** *If *`inside-aws`* parameter is not set, private addresses of nodes will always be converted to public addresses. And, client will use public addresses to connect to nodes. In order to use private addresses, you should set it to *`true`*. Also note that, when connecting outside from AWS, setting *`inside-aws`* parameter to *`true`* will cause the client not to be able to reach to the nodes.*
 
 #### Load Balancer
 
-`LoadBalancer` allows you to send operations to one of a number of endpoints(Members). Its main purpose is to determine the next `Member` if queried.  It is up to the implementation to use different load balancing policies. The interface `com.hazelcast.client.LoadBalancer` sould be implemented for that purpose.
+`LoadBalancer` allows you to send operations to one of a number of endpoints(Members). Its main purpose is to determine the next `Member` if queried.  It is up to the implementation to use different load balancing policies. The interface `com.hazelcast.client.LoadBalancer` should be implemented for that purpose.
 
 If the client is configured as a smart one, only the operations that are not key based will be routed to the endpoint returned by the LoadBalancer. If it is not a smart client, `LoadBalancer` will be ignored.
 
-### Security
-TODO
 
 
-### Near Cache
+### Client Near Cache
 Hazelcast distributed map has a Near Cache feature to reduce network latencies. As the client always requests data from the cluster nodes, it can be helpful for some use cases to configure a near cache on the client side.
 The client supports the exact same near cache used in Hazelcast distributed map. 
 
-### SSLConfig
+### Client SSLConfig
 
 If SSL is desired to be enabled for the client-cluster connection, this parameter should be set. Once set, the connection (socket) is established out of an SSL factory defined either by a factory class name or factory implementation. Please see SSLConfig class in `com.hazelcast.config` package at the JavaDocs page of [Hazelcast Documentation](http://www.hazelcast.org/documentation/) web page.
 
@@ -473,7 +473,8 @@ Below is a generic template of a declarative configuration.
 
 ```xml
 
-<hazelcast-client xsi:schemaLocation="http://www.hazelcast.com/schema/client-config hazelcast-client-config-3.3.xsd"
+<hazelcast-client xsi:schemaLocation=
+    "http://www.hazelcast.com/schema/client-config hazelcast-client-config-3.3.xsd"
                   xmlns="http://www.hazelcast.com/schema/client-config"
                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
@@ -568,8 +569,6 @@ It can be configured using `GroupConfig`, as shown below.
 clientConfig.setGroupConfig(new GroupConfig("dev","dev-pass"));
 ```
 
-##### Client Properties 
-To Do
 
 ##### ClientSecurityConfig
 
@@ -578,13 +577,11 @@ In the cases where the security established with `GroupConfig` is not enough and
 
 ##### SerializationConfig
 
-For the client side serialization, Hazelcast configuration is used. Please refer to [Serialiazation](#serialization) chapter.
+For the client side serialization, Hazelcast configuration is used. Please refer to [Serialization](#serialization) chapter.
 
-##### LoadBalancer
-To Do
 
 ##### ListenerConfig
-Global event listeners can be configured using ListenerConfig as shown below.
+Global event listeners can be configured using `ListenerConfig` as shown below.
 
 
 ```java
@@ -600,10 +597,16 @@ clientConfig.addListenerConfig(listenerConfig);
 ```
 
 There are three types of event listeners that can be added.
-* LifecycleListener ( refer to [com.hazelcast.core.LifecycleListener](#) )
-* MembershipListener ( refer to [com.hazelcast.core.MembershipListener](#) )
-* DistributedObjectListener ( refer to [com.hazelcast.core.DistributedObjectListener](#) )
 
+- LifecycleListener
+- MembershipListener
+- DistributedObjectListener
+
+
+***RELATED INFORMATION***
+
+*Please refer to Hazelcast JavaDocs and see LifecycleListener, MembershipListener and DistributedObjectListener in `com.hazelcast.core` package.*
+<br></br>
 
 ##### NearCacheConfig
 A near cache on the client side can be configured by providing a configuration per map name, as shown below.
@@ -620,7 +623,6 @@ Wildcards can be used for the map name. See below samples.
 ```java
 nearCacheConfig.setName("map*");
 nearCacheConfig.setName("*map");
-
 ```
 
 ##### ClassLoader
@@ -629,15 +631,27 @@ A custom `classLoader` can be configured. It will be used by serialization servi
 ##### ExecutorPoolSize
 Hazelcast has an internal executor service (different from the data structure *Executor Service*) that has threads and queues to perform internal operations such as handling responses. This parameter specifies the size of the pool of threads which perform these operations laying in the executor's queue. If not configured, this parameter has the value as **5 \* *core size of the client*** (i.e. it is 20 for a machine that has 4 cores).
 
-##### ProxyFactoryConfig
 
-To Do (advanced)
 
-##### ManagedContext
 
-To Do (advanced)
+##### Client Properties 
 
-### Examples
+There are some advanced client configuration properties to tune some aspects of Hazelcast Client. These can be set as property name and value pairs through declarative configuration, programmatic configuration or JVM system property. Please see [Advanced Configuration Properties](#advanced-configuration-properties) section to learn how to set these properties.
+
+Below table lists the client configuration properties with their descriptions.
+
+Property Name | Default Value | Type | Description
+:--------------|:---------------|:------|:------------
+`hazelcast.client.heartbeat.timeout`|300000|string|Timeout for the heartbeat messages sent by the client to members. If there is no any message passing between client and member within the given time via this property in milliseconds the connection will be closed.
+`hazelcast.client.heartbeat.interval`|10000|string|The frequency of heartbeat messages sent by the clients to members.
+`hazelcast.client.max.failed.heartbeat.count`|3|string|When the count of failed heartbeats sent to members reaches this value, the cluster is deemed as dead by the client.
+`hazelcast.client.request.retry.count`|20|string|The retry count of the connection requests by the client to the members.
+`hazelcast.client.request.retry.wait.time`|250|string|The frequency of the connection retries.
+`hazelcast.client.event.thread.count`|5|string|Thread count for handling incoming event packets.
+`hazelcast.client.event.queue.capacity`|1000000|string|Default value of the capacity of executor that handles incoming event packets.
+
+
+### Sample Codes for Client
 
 Please refer to [Client Code Samples](https://github.com/hazelcast/hazelcast-code-samples/tree/master/clients).
 

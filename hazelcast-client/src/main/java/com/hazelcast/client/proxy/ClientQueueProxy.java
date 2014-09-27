@@ -16,7 +16,7 @@
 
 package com.hazelcast.client.proxy;
 
-import com.hazelcast.client.ClientRequest;
+import com.hazelcast.client.impl.client.ClientRequest;
 import com.hazelcast.client.spi.ClientProxy;
 import com.hazelcast.client.spi.EventHandler;
 import com.hazelcast.core.HazelcastException;
@@ -27,22 +27,22 @@ import com.hazelcast.core.ItemListener;
 import com.hazelcast.core.Member;
 import com.hazelcast.monitor.LocalQueueStats;
 import com.hazelcast.nio.serialization.Data;
-import com.hazelcast.queue.client.AddAllRequest;
-import com.hazelcast.queue.client.AddListenerRequest;
-import com.hazelcast.queue.client.ClearRequest;
-import com.hazelcast.queue.client.CompareAndRemoveRequest;
-import com.hazelcast.queue.client.ContainsRequest;
-import com.hazelcast.queue.client.DrainRequest;
-import com.hazelcast.queue.client.IsEmptyRequest;
-import com.hazelcast.queue.client.IteratorRequest;
-import com.hazelcast.queue.client.OfferRequest;
-import com.hazelcast.queue.client.PeekRequest;
-import com.hazelcast.queue.client.PollRequest;
-import com.hazelcast.queue.client.RemainingCapacityRequest;
-import com.hazelcast.queue.client.RemoveListenerRequest;
-import com.hazelcast.queue.client.RemoveRequest;
-import com.hazelcast.queue.client.SizeRequest;
-import com.hazelcast.queue.proxy.QueueIterator;
+import com.hazelcast.queue.impl.client.AddAllRequest;
+import com.hazelcast.queue.impl.client.AddListenerRequest;
+import com.hazelcast.queue.impl.client.ClearRequest;
+import com.hazelcast.queue.impl.client.CompareAndRemoveRequest;
+import com.hazelcast.queue.impl.client.ContainsRequest;
+import com.hazelcast.queue.impl.client.DrainRequest;
+import com.hazelcast.queue.impl.client.IsEmptyRequest;
+import com.hazelcast.queue.impl.client.IteratorRequest;
+import com.hazelcast.queue.impl.client.OfferRequest;
+import com.hazelcast.queue.impl.client.PeekRequest;
+import com.hazelcast.queue.impl.client.PollRequest;
+import com.hazelcast.queue.impl.client.RemainingCapacityRequest;
+import com.hazelcast.queue.impl.client.RemoveListenerRequest;
+import com.hazelcast.queue.impl.client.RemoveRequest;
+import com.hazelcast.queue.impl.client.SizeRequest;
+import com.hazelcast.queue.impl.proxy.QueueIterator;
 import com.hazelcast.spi.impl.PortableCollection;
 import com.hazelcast.spi.impl.PortableItemEvent;
 import java.util.ArrayList;
@@ -59,8 +59,8 @@ public final class ClientQueueProxy<E> extends ClientProxy implements IQueue<E> 
 
     private final String name;
 
-    public ClientQueueProxy(String instanceName, String serviceName, String name) {
-        super(instanceName, serviceName, name);
+    public ClientQueueProxy(String serviceName, String name) {
+        super(serviceName, name);
         this.name = name;
     }
 
@@ -76,6 +76,10 @@ public final class ClientQueueProxy<E> extends ClientProxy implements IQueue<E> 
                 } else {
                     listener.itemRemoved(itemEvent);
                 }
+            }
+
+            @Override
+            public void beforeListenerRegister() {
             }
 
             @Override

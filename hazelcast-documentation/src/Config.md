@@ -72,17 +72,60 @@ After creating `Config` object, you can use it to create a new Hazelcast instanc
 <a name="named-hazelcastinstance"></a>
 -   To create a named `HazelcastInstance` you should set `instanceName` of `Config` object. 
 
-    ```java
+```java
     Config config = new Config();
     config.setInstanceName( "my-instance" );
     Hazelcast.newHazelcastInstance( config );
     ```
 -   To retrieve an existing `HazelcastInstance` using its name, use;
 
-    `Hazelcast.getHazelcastInstanceByName( "my-instance" );`
+`Hazelcast.getHazelcastInstanceByName( "my-instance" );`
 
 -   To retrieve all existing`HazelcastInstance`s, use;
 
-    `Hazelcast.getAllHazelcastInstances();`
+`Hazelcast.getAllHazelcastInstances();`
+
+
+## Using Wildcard
+
+Hazelcast supports wildcard configuration for all distributed data structures that can be configured using `Config` (i.e. for all except IAtomicLong, IAtomicReference). Using an asterisk (\*) character in the name, different instances of maps, queues, topics, semaphores, etc. can be configured by a single configuration.
+
+Note that, with a limitation of a single usage, asterisk (\*) can be placed anywhere inside the configuration name.
+
+For instance, a map named '`com.hazelcast.test.mymap`' can be configured using one of these configurations;
+
+```xml
+<map name="com.hazelcast.test.*">
+...
+</map>
+```
+```xml
+<map name="com.hazel*">
+...
+</map>
+```
+```xml
+<map name="*.test.mymap">
+...
+</map>
+```
+```xml
+<map name="com.*test.mymap">
+...
+</map>
+```
+Or a queue '`com.hazelcast.test.myqueue`';
+
+```xml
+<queue name="*hazelcast.test.myqueue">
+...
+</queue>
+```
+```xml
+<queue name="com.hazelcast.*.myqueue">
+...
+</queue>
+```
+
 
 

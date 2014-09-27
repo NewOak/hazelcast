@@ -2,7 +2,7 @@
 
 ### Map Locks
 
-Hazelcast Distributed Map is thread-safe and meets your thread safety requirements. When these requirements increase or you want to have more control on the concurrency, below features and solutions provided by Hazelcast can be considered.
+Hazelcast Distributed Map (IMap) is thread-safe and meets your thread safety requirements. When these requirements increase or you want to have more control on the concurrency, below features and solutions provided by Hazelcast can be considered.
 
 Let's work on a sample case as shown below.
 
@@ -30,7 +30,7 @@ public class RacyUpdateMember {
 }
 ```
 
-If the above code is run by more than cluster members simultaneously, there will be likely a race condition.
+If the above code is run by more than one cluster members simultaneously, there will be likely a race condition.
 
 #### Pessimistic Locking
 
@@ -64,7 +64,12 @@ public class PessimisticUpdateMember {
 }
 ```
 
+The IMap lock will automatically be collected by the garbage collector when the map entry is removed.
+
+The IMap lock is reentrant, but it does not support fairness.
+
 Another way can be acquiring a predictable `Lock` object from Hazelcast. By this way, every value in the map can be given a lock or you can create a stripe of locks.
+
 
 #### Optimistic Locking
 

@@ -38,7 +38,8 @@ import static org.junit.Assert.assertTrue;
  *
  * @since 3.3
  */
-@RunWith(HazelcastSerialClassRunner.class)
+@RunWith(WebTestRunner.class)
+@DelegatedRunWith(HazelcastSerialClassRunner.class)
 @Category(SlowTest.class)
 public class WebFilterSessionCleanupTest extends AbstractWebFilterTest {
 
@@ -48,7 +49,7 @@ public class WebFilterSessionCleanupTest extends AbstractWebFilterTest {
 
     @Test(timeout = 130000)
     public void testSessionTimeout() throws Exception {
-        IMap<String, Object> map = hz.getMap("default");
+        IMap<String, Object> map = hz.getMap(DEFAULT_MAP_NAME);
         CookieStore cookieStore = new BasicCookieStore();
 
         // Write a value into the session on one server

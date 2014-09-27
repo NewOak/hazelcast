@@ -1,9 +1,13 @@
 
 ### Tomcat Based Web Session Replication
 
+***NOTE:*** *This feature is supported for Hazelcast Enterprise 3.3 or higher.*
+
+
 ![](images/enterprise-onlycopy.jpg)
 
-***NOTE:*** *This feature is supported for Hazelcast Enterprise 3.3 or higher.*
+
+***Sample Code**: Please see our sample application for [Tomcat Based Web Session Replication](https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/tomcat-session-replication).*
 
 #### Overview
 
@@ -32,7 +36,7 @@ Latest tested versions are **6.0.39** and **7.0.40**.
  - Tomcat instance must be running with Java 1.6 or higher.
  - Session objects that need to be clustered have to be Serializable.
 
-##### How Tomcat Session Replication works
+#### How Tomcat Session Replication works
 
 Tomcat Session Replication in Hazelcast Enterprise is a Hazelcast Module where each created `HttpSession` Object is kept in Hazelcast Distributed Map. Additionally, if configured with Sticky Sessions, each Tomcat Instance has its own local copy of Session for performance boost. 
 
@@ -56,11 +60,11 @@ This type of deployment is the simplest approach. You can just configure your To
 - Go to [hazelcast.com](http://www.hazelcast.com/products/hazelcast-enterprise/) and download the latest Hazelcast Enterprise.
 - Unzip the Hazelcast Enterprise zip file into the folder `$HAZELCAST_ENTERPRISE_ROOT`.
 - Update `$HAZELCAST_ENTERPRISE_ROOT/bin/hazelcast.xml` with the provided Hazelcast Enterprise License Key. 
-- Put `$HAZELCAST_ENTERPRISE_ROOT/lib/hazelcast-all-`<*version*>`-ee.jar`, `$HAZELCAST_ENTERPRISE_ROOT/lib/hazelcast-sessions-`<*version*>`.jar` and `hazelcast.xml` to the folder `$CATALINA_HOME/lib/`.
+- Put `$HAZELCAST_ENTERPRISE_ROOT/lib/hazelcast-enterprise-all-`<*version*>`.jar`,    `$HAZELCAST_ENTERPRISE_ROOT/lib/hazelcast-enterprise-`<*tomcatversion*>`-`<*version*>`.jar` and `hazelcast.xml` to the folder `$CATALINA_HOME/lib/`.
 
 - Put `<Listener>` tag into the file `$CATALINA_HOME$/conf/server.xml` as shown below.
 
- ```xml
+```xml
 <Server>
 	...
     <Listener className="com.hazelcast.session.P2PLifecycleListener"/>
@@ -70,7 +74,7 @@ This type of deployment is the simplest approach. You can just configure your To
 
 - Put `<Manager>` tag into the file `$CATALINA_HOME$/conf/context.xml` as shown below.
 
- ```xml
+```xml
 <Context>
 	...
     <Manager className="com.hazelcast.session.HazelcastSessionManager"/>
@@ -101,11 +105,11 @@ In this deployment type, Tomcat instances work as clients to an existing Hazelca
 
 - Go to [hazelcast.com](http://www.hazelcast.com/products/hazelcast-enterprise/) and download the latest Hazelcast Enterprise.
 - Unzip the Hazelcast Enterprise zip file into the folder `$HAZELCAST_ENTERPRISE_ROOT`.
-- Put `$HAZELCAST_ENTERPRISE_ROOT/lib/hazelcast-client-`<*version*>`.jar`,`$HAZELCAST_ENTERPRISE_ROOT/lib/hazelcast-`<*version*>`-ee.jar` and `$HAZELCAST_ENTERPRISE_ROOT/lib/hazelcast-sessions-`<*version*>`.jar` to the folder `$CATALINA_HOME/lib/`.
+- Put `$HAZELCAST_ENTERPRISE_ROOT/lib/hazelcast-client-`<*version*>`.jar`,            `$HAZELCAST_ENTERPRISE_ROOT/lib/hazelcast-enterprise-`<*version*>`.jar` and           `$HAZELCAST_ENTERPRISE_ROOT/lib/hazelcast-enterprise-`<*tomcatversion*>`-`<*version*>`.jar` to the folder `$CATALINA_HOME/lib/`.
 
 - Put `<Listener>` tag into the `$CATALINA_HOME$/conf/server.xml` as shown below.
 
- ```xml
+```xml
 <Server>
 	...
     <Listener className="com.hazelcast.session.ClientServerLifecycleListener"/>
@@ -115,7 +119,7 @@ In this deployment type, Tomcat instances work as clients to an existing Hazelca
 
 - Update `<Manager>` tag in the `$CATALINA_HOME$/conf/context.xml` as shown below.
 
-  ```xml
+```xml
 <Context>
      <Manager className="com.hazelcast.session.HazelcastSessionManager"
       clientOnly="true"/>
@@ -185,7 +189,7 @@ Non-Sticky Sessions are not good for performance because you need to move sessio
 
 However, load balancing might be super easy with Non-Sticky caches. In case of heavy load, you can distribute the request to the least used Tomcat instance. Hazelcast supports Non-Sticky Sessions as well. 
 
-####Tomcat Failover and jvmRoute Parameter
+#### Tomcat Failover and jvmRoute Parameter
 
 Each HTTP Request is redirected to the same Tomcat instance if sticky sessions are enabled. The parameter `jvmRoute` is added to the end of session ID as a suffix, to make Load Balancer aware of the target Tomcat instance. 
 

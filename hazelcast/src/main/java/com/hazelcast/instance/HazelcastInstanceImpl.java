@@ -16,7 +16,7 @@
 
 package com.hazelcast.instance;
 
-import com.hazelcast.client.ClientServiceProxy;
+import com.hazelcast.client.impl.ClientServiceProxy;
 import com.hazelcast.collection.list.ListService;
 import com.hazelcast.collection.set.SetService;
 import com.hazelcast.concurrent.atomiclong.AtomicLongService;
@@ -50,26 +50,28 @@ import com.hazelcast.core.Member;
 import com.hazelcast.core.MultiMap;
 import com.hazelcast.core.PartitionService;
 import com.hazelcast.core.ReplicatedMap;
-import com.hazelcast.executor.DistributedExecutorService;
+import com.hazelcast.executor.impl.DistributedExecutorService;
 import com.hazelcast.jmx.ManagementService;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.management.ThreadMonitoringService;
-import com.hazelcast.map.MapService;
+import com.hazelcast.map.impl.MapService;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.impl.MapReduceService;
-import com.hazelcast.multimap.MultiMapService;
+import com.hazelcast.multimap.impl.MultiMapService;
 import com.hazelcast.nio.serialization.SerializationService;
-import com.hazelcast.queue.QueueService;
-import com.hazelcast.replicatedmap.ReplicatedMapService;
+import com.hazelcast.queue.impl.QueueService;
+import com.hazelcast.replicatedmap.impl.ReplicatedMapService;
 import com.hazelcast.spi.ProxyService;
 import com.hazelcast.spi.annotation.PrivateApi;
-import com.hazelcast.topic.TopicService;
+import com.hazelcast.topic.impl.TopicService;
 import com.hazelcast.transaction.TransactionContext;
 import com.hazelcast.transaction.TransactionException;
 import com.hazelcast.transaction.TransactionManagerService;
 import com.hazelcast.transaction.TransactionOptions;
 import com.hazelcast.transaction.TransactionalTask;
+import com.hazelcast.util.EmptyStatement;
+import com.hazelcast.util.ExceptionUtil;
 import com.hazelcast.util.HealthMonitor;
 import com.hazelcast.util.HealthMonitorLevel;
 
@@ -116,22 +118,37 @@ public final class HazelcastInstanceImpl
         //in one HazelcastInstance will not reflect on other the user-context of other HazelcastInstances.
         userContext.putAll(config.getUserContext());
         node = new Node(this, config, nodeContext);
-        logger = node.getLogger(getClass().getName());
-        lifecycleService.fireLifecycleEvent(STARTING);
-        node.start();
-        if (!node.isActive()) {
-            node.connectionManager.shutdown();
-            throw new IllegalStateException("Node failed to start!");
-        }
-        managementService = new ManagementService(this);
 
+        try {
+            logger = node.getLogger(getClass().getName());
+            lifecycleService.fireLifecycleEvent(STARTING);
+
+            node.start();
+            if (!node.isActive()) {
+                throw new IllegalStateException("Node failed to start!");
+            }
+
+            managementService = new ManagementService(this);
+            initManagedContext(configuredManagedContext);
+            initHealthMonitor();
+        } catch (Throwable e) {
+            try {
+                // Terminate the node by terminating node engine,
+                // connection manager, multicast service, operation threads, etc ... if they are exist
+                node.shutdown(true);
+            } catch (Throwable ignored) {
+                EmptyStatement.ignore(ignored);
+            }
+            throw ExceptionUtil.rethrow(e);
+        }
+    }
+
+    private void initManagedContext(ManagedContext configuredManagedContext) {
         if (configuredManagedContext != null) {
             if (configuredManagedContext instanceof HazelcastInstanceAware) {
                 ((HazelcastInstanceAware) configuredManagedContext).setHazelcastInstance(this);
             }
         }
-
-        initHealthMonitor();
     }
 
     private void initHealthMonitor() {

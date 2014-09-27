@@ -45,7 +45,7 @@ import com.hazelcast.management.request.MemberConfigRequest;
 import com.hazelcast.management.request.RunGcRequest;
 import com.hazelcast.management.request.ShutdownMemberRequest;
 import com.hazelcast.management.request.ThreadDumpRequest;
-import com.hazelcast.map.MapService;
+import com.hazelcast.map.impl.MapService;
 import com.hazelcast.monitor.TimedMemberState;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.IOUtil;
@@ -84,7 +84,7 @@ public class ManagementCenterService {
     static final int HTTP_SUCCESS = 200;
     static final int CONNECTION_TIMEOUT_MILLIS = 5000;
     static final long SLEEP_BETWEEN_POLL_MILLIS = 1000;
-    static final long DEFAULT_UPDATE_INTERVAL = 5000;
+    static final long DEFAULT_UPDATE_INTERVAL = 3000;
 
     private final HazelcastInstanceImpl instance;
     private final TaskPollThread taskPollThread;
@@ -98,6 +98,7 @@ public class ManagementCenterService {
 
     private volatile String managementCenterUrl;
     private volatile boolean urlChanged;
+    private volatile boolean manCenterConnectionLost;
 
     public ManagementCenterService(HazelcastInstanceImpl instance) {
         this.instance = instance;
@@ -322,15 +323,18 @@ public class ManagementCenterService {
                     writer.flush();
                     outputStream.flush();
                     post(connection);
+                    if (manCenterConnectionLost) {
+                        logger.info("Connection to management center restored.");
+                    }
+                    manCenterConnectionLost = false;
                 } finally {
                     closeResource(writer);
                     closeResource(outputStream);
                 }
             } catch (ConnectException e) {
-                if (logger.isFinestEnabled()) {
-                    logger.finest(e);
-                } else {
-                    logger.info("Failed to connect to:" + url);
+                if (!manCenterConnectionLost) {
+                    manCenterConnectionLost = true;
+                    log("Failed to connect to:" + url, e);
                 }
             } catch (Exception e) {
                 logger.warning(e);
@@ -442,7 +446,16 @@ public class ManagementCenterService {
                     task.fromJson(getObject(innerRequest, "request"));
                     processTaskAndSendResponse(taskId, task);
                 }
+                if (manCenterConnectionLost) {
+                    logger.info("Connection to management center restored.");
+                }
+                manCenterConnectionLost = false;
 
+            } catch (ConnectException e) {
+                if (!manCenterConnectionLost) {
+                    manCenterConnectionLost = true;
+                    log("Failed to connect to management center", e);
+                }
             } catch (Exception e) {
                 logger.warning(e);
             } finally {
@@ -501,8 +514,16 @@ public class ManagementCenterService {
                     + ":" + localAddress.getPort() + "&cluster=" + groupConfig.getName();
             return new URL(urlString);
         }
+
     }
 
+    private void log(String msg, Throwable t) {
+        if (logger.isFinestEnabled()) {
+            logger.finest(msg, t);
+        } else {
+            logger.info(msg);
+        }
+    }
 
     /**
      * LifecycleListener for listening for LifecycleState.STARTED event to start

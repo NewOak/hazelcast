@@ -225,37 +225,47 @@ public class TcpIpConnectionManager implements ConnectionManager {
         if (checkAlreadyConnected(connection, remoteEndPoint)) {
             return false;
         }
-        if (registerConnectionEndpoint(connection, remoteEndPoint, thisAddress)) {
-            return true;
+        if (!registerConnection(remoteEndPoint, connection)) {
+            return false;
         }
-        return false;
+        return true;
     }
 
-    private boolean registerConnectionEndpoint(final TcpIpConnection connection,
-            final Address remoteEndPoint, Address thisAddress) {
-
-        if (!remoteEndPoint.equals(thisAddress)) {
-            if (!connection.isClient()) {
-                connection.setMonitor(getConnectionMonitor(remoteEndPoint, true));
-            }
-            connectionsMap.put(remoteEndPoint, connection);
-            connectionsInProgress.remove(remoteEndPoint);
-            ioService.getEventService().executeEventCallback(new StripedRunnable() {
-                @Override
-                public void run() {
-                    for (ConnectionListener listener : connectionListeners) {
-                        listener.connectionAdded(connection);
-                    }
-                }
-
-                @Override
-                public int getKey() {
-                    return remoteEndPoint.hashCode();
-                }
-            });
-            return true;
+    public boolean registerConnection(final Address remoteEndPoint, final Connection connection) {
+        if (remoteEndPoint.equals(ioService.getThisAddress())) {
+            return false;
         }
-        return false;
+
+        if (connection instanceof TcpIpConnection) {
+            TcpIpConnection tcpConnection = (TcpIpConnection) connection;
+            Address currentEndPoint = tcpConnection.getEndPoint();
+            if (currentEndPoint != null && !currentEndPoint.equals(remoteEndPoint)) {
+                throw new IllegalArgumentException(connection + " has already a different endpoint than: "
+                        + remoteEndPoint);
+            }
+            tcpConnection.setEndPoint(remoteEndPoint);
+
+            if (!connection.isClient()) {
+                TcpIpConnectionMonitor connectionMonitor = getConnectionMonitor(remoteEndPoint, true);
+                tcpConnection.setMonitor(connectionMonitor);
+            }
+        }
+        connectionsMap.put(remoteEndPoint, connection);
+        connectionsInProgress.remove(remoteEndPoint);
+        ioService.getEventService().executeEventCallback(new StripedRunnable() {
+            @Override
+            public void run() {
+                for (ConnectionListener listener : connectionListeners) {
+                    listener.connectionAdded(connection);
+                }
+            }
+
+            @Override
+            public int getKey() {
+                return remoteEndPoint.hashCode();
+            }
+        });
+        return true;
     }
 
     private boolean checkAlreadyConnected(TcpIpConnection connection, Address remoteEndPoint) {
@@ -294,15 +304,16 @@ public class TcpIpConnectionManager implements ConnectionManager {
         return wrapper;
     }
 
-    TcpIpConnection assignSocketChannel(SocketChannelWrapper channel) {
+    TcpIpConnection assignSocketChannel(SocketChannelWrapper channel, Address endpoint) {
         final int index = nextSelectorIndex();
         final TcpIpConnection connection = new TcpIpConnection(this, inSelectors[index],
                 outSelectors[index], connectionIdGen.incrementAndGet(), channel);
+        connection.setEndPoint(endpoint);
         activeConnections.add(connection);
         acceptedSockets.remove(channel);
         connection.getReadHandler().register();
-        log(Level.INFO, channel.socket().getLocalPort() + " accepted socket connection from "
-                + channel.socket().getRemoteSocketAddress());
+        log(Level.INFO,  "Established socket connection between " + channel.socket().getLocalSocketAddress()
+                + " and " + channel.socket().getRemoteSocketAddress());
         return connection;
     }
 
@@ -397,22 +408,35 @@ public class TcpIpConnectionManager implements ConnectionManager {
         }
         live = true;
         log(Level.FINEST, "Starting ConnectionManager and IO selectors.");
+        IOSelectorOutOfMemoryHandler oomeHandler = new IOSelectorOutOfMemoryHandler() {
+            @Override
+            public void handle(OutOfMemoryError error) {
+                ioService.onOutOfMemory(error);
+            }
+        };
         for (int i = 0; i < inSelectors.length; i++) {
-            inSelectors[i] = new InSelectorImpl(ioService, i);
-            outSelectors[i] = new OutSelectorImpl(ioService, i);
+            inSelectors[i] = new InSelectorImpl(
+                    ioService.getThreadGroup(),
+                    ioService.getThreadPrefix() + "in-" + i,
+                    ioService.getLogger(InSelectorImpl.class.getName()),
+                    oomeHandler);
+            outSelectors[i] = new OutSelectorImpl(
+                    ioService.getThreadGroup(),
+                    ioService.getThreadPrefix() + "out-" + i,
+                    ioService.getLogger(OutSelectorImpl.class.getName()),
+                    oomeHandler);
             inSelectors[i].start();
             outSelectors[i].start();
         }
-        if (serverSocketChannel != null) {
-            if (socketAcceptorThread != null) {
-                logger.warning("SocketAcceptor thread is already live! Shutting down old acceptor...");
-                shutdownSocketAcceptor();
-            }
-            Runnable acceptRunnable = new SocketAcceptor(serverSocketChannel, this);
-            socketAcceptorThread = new Thread(ioService.getThreadGroup(), acceptRunnable,
-                    ioService.getThreadPrefix() + "Acceptor");
-            socketAcceptorThread.start();
+
+        if (socketAcceptorThread != null) {
+            logger.warning("SocketAcceptor thread is already live! Shutting down old acceptor...");
+            shutdownSocketAcceptor();
         }
+        Runnable acceptRunnable = new SocketAcceptor(serverSocketChannel, this);
+        socketAcceptorThread = new Thread(ioService.getThreadGroup(), acceptRunnable,
+                ioService.getThreadPrefix() + "Acceptor");
+        socketAcceptorThread.start();
     }
 
     @Override
@@ -423,29 +447,30 @@ public class TcpIpConnectionManager implements ConnectionManager {
 
     @Override
     public synchronized void shutdown() {
+        if (!live) {
+            return;
+        }
+        live = false;
+        shutdownSocketAcceptor();
+        closeServerSocket();
+        stop();
+        connectionListeners.clear();
+    }
+
+    private void closeServerSocket() {
         try {
-            if (live) {
-                stop();
-                connectionListeners.clear();
+            if (logger.isFinestEnabled()) {
+                log(Level.FINEST, "Closing server socket channel: " + serverSocketChannel);
             }
-        } finally {
-            if (serverSocketChannel != null) {
-                try {
-                    if (logger.isFinestEnabled()) {
-                        log(Level.FINEST, "Closing server socket channel: " + serverSocketChannel);
-                    }
-                    serverSocketChannel.close();
-                } catch (IOException ignore) {
-                    logger.finest(ignore);
-                }
-            }
+            serverSocketChannel.close();
+        } catch (IOException ignore) {
+            logger.finest(ignore);
         }
     }
 
     private void stop() {
         live = false;
         log(Level.FINEST, "Stopping ConnectionManager");
-        // interrupt acceptor thread after live=false
         shutdownSocketAcceptor();
         for (SocketChannelWrapper socketChannel : acceptedSockets) {
             IOUtil.closeResource(socketChannel);
@@ -526,7 +551,6 @@ public class TcpIpConnectionManager implements ConnectionManager {
 
     private void log(Level level, String message) {
         logger.log(level, message);
-        ioService.getSystemLogService().logConnection(message);
     }
 
     boolean useAnyOutboundPort() {

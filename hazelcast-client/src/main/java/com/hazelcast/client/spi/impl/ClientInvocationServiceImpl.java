@@ -16,13 +16,14 @@
 
 package com.hazelcast.client.spi.impl;
 
-import com.hazelcast.client.ClientRequest;
-import com.hazelcast.client.ClientResponse;
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.connection.ClientConnectionManager;
 import com.hazelcast.client.connection.nio.ClientConnection;
+import com.hazelcast.client.impl.client.ClientRequest;
+import com.hazelcast.client.impl.client.ClientResponse;
 import com.hazelcast.client.spi.ClientInvocationService;
 import com.hazelcast.client.spi.EventHandler;
+import com.hazelcast.cluster.client.ClientPingRequest;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
@@ -55,40 +56,45 @@ public final class ClientInvocationServiceImpl implements ClientInvocationServic
         responseThread.start();
     }
 
+    @Override
     public <T> ICompletableFuture<T> invokeOnRandomTarget(ClientRequest request) throws Exception {
         return send(request);
     }
 
+    @Override
     public <T> ICompletableFuture<T> invokeOnTarget(ClientRequest request, Address target) throws Exception {
         return send(request, target);
     }
 
+    @Override
     public <T> ICompletableFuture<T> invokeOnKeyOwner(ClientRequest request, Object key) throws Exception {
+        return invokeOnKeyOwner(request, key, null);
+    }
+
+    @Override
+    public <T> ICompletableFuture<T> invokeOnKeyOwner(ClientRequest request, Object key, EventHandler handler)
+            throws Exception {
         ClientPartitionServiceImpl partitionService = (ClientPartitionServiceImpl) client.getClientPartitionService();
-        final Address owner = partitionService.getPartitionOwner(partitionService.getPartitionId(key));
+        int partitionId = partitionService.getPartitionId(key);
+        final Address owner = partitionService.getPartitionOwner(partitionId);
         if (owner != null) {
-            return invokeOnTarget(request, owner);
+            final ClientConnection connection = connectionManager.tryToConnect(owner);
+            final ClientCallFuture future = new ClientCallFuture(client, request, handler);
+            sendInternal(future, connection, partitionId);
+            return future;
         }
         return invokeOnRandomTarget(request);
     }
 
+    @Override
     public <T> ICompletableFuture<T> invokeOnRandomTarget(ClientRequest request, EventHandler handler) throws Exception {
         return sendAndHandle(request, handler);
     }
 
+    @Override
     public <T> ICompletableFuture<T> invokeOnTarget(ClientRequest request, Address target, EventHandler handler)
             throws Exception {
         return sendAndHandle(request, target, handler);
-    }
-
-    public <T> ICompletableFuture<T> invokeOnKeyOwner(ClientRequest request, Object key, EventHandler handler)
-            throws Exception {
-        ClientPartitionServiceImpl partitionService = (ClientPartitionServiceImpl) client.getClientPartitionService();
-        final Address owner = partitionService.getPartitionOwner(partitionService.getPartitionId(key));
-        if (owner != null) {
-            return invokeOnTarget(request, owner, handler);
-        }
-        return invokeOnRandomTarget(request, handler);
     }
 
     // NIO public
@@ -100,14 +106,13 @@ public final class ClientInvocationServiceImpl implements ClientInvocationServic
 
     public Future reSend(ClientCallFuture future) throws Exception {
         final ClientConnection connection = connectionManager.tryToConnect(null);
-        sendInternal(future, connection);
+        sendInternal(future, connection, -1);
         return future;
     }
 
     public boolean isRedoOperation() {
         return client.getClientConfig().isRedoOperation();
     }
-
 
     //NIO private
 
@@ -133,21 +138,38 @@ public final class ClientInvocationServiceImpl implements ClientInvocationServic
 
     private ICompletableFuture doSend(ClientRequest request, ClientConnection connection, EventHandler handler) {
         final ClientCallFuture future = new ClientCallFuture(client, request, handler);
-        sendInternal(future, connection);
+        sendInternal(future, connection, -1);
         return future;
     }
 
-    private void sendInternal(ClientCallFuture future, ClientConnection connection) {
+    private void sendInternal(ClientCallFuture future, ClientConnection connection, int partitionId) {
         connection.registerCallId(future);
         future.setConnection(connection);
         final SerializationService ss = client.getSerializationService();
-        final Data data = ss.toData(future.getRequest());
-        if (!connection.write(new Packet(data, ss.getPortableContext()))) {
-            final int callId = future.getRequest().getCallId();
+        final ClientRequest request = future.getRequest();
+        final Data data = ss.toData(request);
+        Packet packet = new Packet(data, partitionId, ss.getPortableContext());
+        if (!isAllowedToSendRequest(connection, request) || !connection.write(packet)) {
+            final int callId = request.getCallId();
             connection.deRegisterCallId(callId);
             connection.deRegisterEventHandler(callId);
             future.notify(new TargetNotMemberException("Address : " + connection.getRemoteEndpoint()));
         }
+    }
+
+    private boolean isAllowedToSendRequest(ClientConnection connection, ClientRequest request) {
+        if (!connection.isHeartBeating()) {
+            if (request instanceof ClientPingRequest) {
+                //ping request should be send even though heart is not beating
+                return true;
+            }
+
+            if (logger.isFinestEnabled()) {
+                logger.warning("Connection is not heart-beating, won't write request -> " + request);
+            }
+            return false;
+        }
+        return true;
     }
 
     public void shutdown() {
@@ -167,6 +189,7 @@ public final class ClientInvocationServiceImpl implements ClientInvocationServic
             setContextClassLoader(classLoader);
         }
 
+        @Override
         public void run() {
             try {
                 doRun();
@@ -178,7 +201,7 @@ public final class ClientInvocationServiceImpl implements ClientInvocationServic
         }
 
         private void doRun() {
-            for (;;) {
+            while (true) {
                 Packet task;
                 try {
                     task = workQueue.take();

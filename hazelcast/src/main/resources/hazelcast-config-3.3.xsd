@@ -35,6 +35,7 @@
                 <xs:element name="queue" type="queue" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element name="map" type="map" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element name="multimap" type="multimap" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element name="replicatedmap" type="replicatedmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element name="list" type="list" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element name="set" type="set" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element name="topic" type="topic" minOccurs="0" maxOccurs="unbounded"/>
@@ -53,6 +54,7 @@
         <xs:sequence>
             <xs:element name="in-memory-format" type="in-memory-format" minOccurs="0" maxOccurs="1" default="BINARY"/>
             <xs:element name="statistics-enabled" type="xs:boolean" minOccurs="0" maxOccurs="1" default="true"/>
+            <xs:element name="optimize-queries" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false"/>
             <xs:element name="backup-count" type="backup-count" minOccurs="0" maxOccurs="1" default="1">
                 <xs:annotation>
                     <xs:documentation>
@@ -132,6 +134,16 @@
                     </xs:restriction>
                 </xs:simpleType>
             </xs:element>
+            <xs:element name="min-eviction-check-millis" type="xs:unsignedLong" minOccurs="0" maxOccurs="1"
+                        default="100">
+                <xs:annotation>
+                    <xs:documentation>
+                        Minimum time in milliseconds which should pass before checking
+                        if a partition of this map is evictable or not.
+                        Default value is 100 millis.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
             <xs:element name="merge-policy" type="xs:string" minOccurs="0" maxOccurs="1">
                 <xs:annotation>
                     <xs:documentation>
@@ -174,7 +186,7 @@
                 </xs:complexType>
             </xs:element>
             <xs:element name="entry-listeners" type="entry-listeners" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="partition-strategy" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="partition-strategy" type="xs:string" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
         <xs:attribute name="name" use="required">
             <xs:simpleType>
@@ -289,6 +301,57 @@
             </xs:simpleType>
         </xs:attribute>
     </xs:complexType>
+    <xs:complexType name="replicatedmap">
+        <xs:annotation>
+            <xs:documentation>
+                A replicated map is a fully vector clock based, eventually consistent implementation of the map
+                interface. In difference to all other Hazelcast data structures this implementation is not
+                partitioned but fully replicates all data to all members.
+                Due to the nature of eventually consistency there is a chance of reading staled data and no
+                guarantee is given to retrieve the same value on multiple get calls.
+                ReplicatedMap was added in Hazelcast 3.2.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:sequence>
+            <xs:element name="in-memory-format" type="in-memory-format" minOccurs="0" maxOccurs="1" default="OBJECT"/>
+            <xs:element name="concurrency-level" type="concurrency-level" minOccurs="0" maxOccurs="1" default="32">
+                <xs:annotation>
+                    <xs:documentation>
+                        Number of parallel mutexes to minimize contention on keys. The default value is 32 which
+                        is a good number for lots of applications. If higher contention is seen on writes to values
+                        inside of the replicated map this value can be adjusted to the needs.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="replication-delay-millis" type="xs:unsignedInt" minOccurs="0" maxOccurs="1" default="100">
+                <xs:annotation>
+                    <xs:documentation>
+                        Defines a number of milliseconds after a put is executed before the value is replicated
+                        to other nodes. In this time multiple puts can be operated and are cached up to be send
+                        at once. This highers the latency for eventually consistency but lowers IO operations.
+                        Default value is 100ms before a replication is operated, if set to 0 no delay is used and
+                        all values are replicated one by one.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="async-fillup" type="xs:boolean" minOccurs="0" maxOccurs="1" default="true">
+                <xs:annotation>
+                    <xs:documentation>
+                        This value defines it the replicated map is available for reads before the initial
+                        replication is completed. Default is true. If set to false no Exception will be
+                        thrown when replicated map is not yet ready but call will block until finished.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="statistics-enabled" type="xs:boolean" minOccurs="0" maxOccurs="1" default="true"/>
+            <xs:element name="entry-listeners" type="entry-listeners" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attribute name="name" use="required">
+            <xs:simpleType>
+                <xs:restriction base="xs:string"/>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:complexType>
     <xs:complexType name="topic">
         <xs:sequence>
             <xs:element name="statistics-enabled" type="xs:boolean" minOccurs="0" maxOccurs="1"
@@ -366,7 +429,8 @@
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
-            <xs:element name="topology-changed-strategy" type="topology-changed-strategy" minOccurs="0" maxOccurs="1" default="CANCEL_RUNNING_OPERATION">
+            <xs:element name="topology-changed-strategy" type="topology-changed-strategy" minOccurs="0" maxOccurs="1"
+                        default="CANCEL_RUNNING_OPERATION">
                 <xs:annotation>
                     <xs:documentation>
                         The topology-changed-strategy defines how the map reduce framework will react on topology
@@ -399,6 +463,7 @@
         <xs:sequence>
             <xs:element name="public-address" type="xs:string" minOccurs="0" maxOccurs="1"/>
             <xs:element name="port" type="port" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="reuse-address" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false"/>
             <xs:element name="outbound-ports" type="outbound-ports" minOccurs="0" maxOccurs="1"/>
             <xs:element name="join" type="join" minOccurs="0" maxOccurs="1"/>
             <xs:element name="interfaces" type="interfaces" minOccurs="0" maxOccurs="1"/>
@@ -496,7 +561,7 @@
     </xs:complexType>
     <xs:complexType name="interfaces">
         <xs:sequence>
-            <xs:element name="interface" type="xs:string" default="127.0.0.1"  minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="interface" type="xs:string" default="127.0.0.1" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
         <xs:attribute name="enabled" type="xs:boolean" use="optional" default="false"/>
     </xs:complexType>
@@ -652,8 +717,8 @@
             <xs:extension base="xs:string">
                 <xs:attribute name="enabled" type="xs:boolean" default="false" use="optional"/>
                 <xs:attribute name="update-interval" type="xs:integer" default="3" use="optional"/>
-                <xs:attribute name="cluster-id" type="xs:string"  use="optional"/>
-                <xs:attribute name="security-token" type="xs:string"  use="optional"/>
+                <xs:attribute name="cluster-id" type="xs:string" use="optional"/>
+                <xs:attribute name="security-token" type="xs:string" use="optional"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
@@ -922,11 +987,8 @@
         </xs:simpleContent>
     </xs:complexType>
     <xs:complexType name="serializer">
-        <xs:simpleContent>
-            <xs:extension base="xs:string">
-                <xs:attribute name="type-class" type="xs:string"/>
-            </xs:extension>
-        </xs:simpleContent>
+        <xs:attribute name="class-name" type="xs:string" use="required"/>
+        <xs:attribute name="type-class" type="xs:string" use="required"/>
     </xs:complexType>
 
     <xs:complexType name="socket-interceptor">
@@ -950,14 +1012,14 @@
         </xs:sequence>
     </xs:complexType>
 
-	<xs:element name="member-attributes">
-    	<xs:complexType >
-        	<xs:sequence>
-            	<xs:element name="attribute" type="attribute" maxOccurs="unbounded"/>
-        	</xs:sequence>
-    	</xs:complexType>
+    <xs:element name="member-attributes">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="attribute" type="attribute" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
         <xs:unique name="uniqueAttributeConstraint">
-        	<xs:selector xpath="./*"/>
+            <xs:selector xpath="./*"/>
             <xs:field xpath="@name"/>
         </xs:unique>
     </xs:element>
@@ -979,9 +1041,9 @@
     <xs:complexType name="attribute">
         <xs:simpleContent>
             <xs:extension base="xs:string">
-        		<xs:attribute name="name" use="required" type="attributeName"/>
-        		<!--xs:attribute name="name" use="required" type="xs:ID"/-->
-        		<xs:attribute name="type" use="optional" default="string" type="attributeTypeEnum"/>
+                <xs:attribute name="name" use="required" type="attributeName"/>
+                <!--xs:attribute name="name" use="required" type="xs:ID"/-->
+                <xs:attribute name="type" use="optional" default="string" type="attributeTypeEnum"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
@@ -993,7 +1055,7 @@
 
     <xs:simpleType name="topology-changed-strategy">
         <xs:restriction base="xs:string">
-            <xs:enumeration value="CANCEL_RUNNING_OPERATION" />
+            <xs:enumeration value="CANCEL_RUNNING_OPERATION"/>
             <xs:enumeration value="DISCARD_AND_RESTART"/>
         </xs:restriction>
     </xs:simpleType>

@@ -16,7 +16,7 @@
 
 package com.hazelcast.client.proxy;
 
-import com.hazelcast.client.ClientRequest;
+import com.hazelcast.client.impl.client.ClientRequest;
 import com.hazelcast.client.spi.ClientProxy;
 import com.hazelcast.concurrent.lock.client.IsLockedRequest;
 import com.hazelcast.concurrent.lock.client.GetLockCountRequest;
@@ -37,8 +37,8 @@ public class ClientLockProxy extends ClientProxy implements ILock {
 
     private volatile Data key;
 
-    public ClientLockProxy(String instanceName, String serviceName, String objectId) {
-        super(instanceName, serviceName, objectId);
+    public ClientLockProxy(String serviceName, String objectId) {
+        super(serviceName, objectId);
     }
 
     @Deprecated
@@ -80,7 +80,7 @@ public class ClientLockProxy extends ClientProxy implements ILock {
     }
 
     public ICondition newCondition(String name) {
-        return new ClientConditionProxy(instanceName, this, name, getContext());
+        return new ClientConditionProxy(this, name, getContext());
     }
 
     public void lock() {

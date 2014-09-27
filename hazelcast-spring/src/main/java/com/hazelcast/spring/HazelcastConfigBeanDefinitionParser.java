@@ -16,11 +16,48 @@
 
 package com.hazelcast.spring;
 
-import com.hazelcast.config.*;
+import com.hazelcast.config.AwsConfig;
+import com.hazelcast.config.Config;
+import com.hazelcast.config.CredentialsFactoryConfig;
+import com.hazelcast.config.EntryListenerConfig;
+import com.hazelcast.config.ExecutorConfig;
+import com.hazelcast.config.GroupConfig;
+import com.hazelcast.config.InterfacesConfig;
+import com.hazelcast.config.ItemListenerConfig;
+import com.hazelcast.config.JobTrackerConfig;
+import com.hazelcast.config.JoinConfig;
+import com.hazelcast.config.ListConfig;
+import com.hazelcast.config.ListenerConfig;
+import com.hazelcast.config.LoginModuleConfig;
+import com.hazelcast.config.ManagementCenterConfig;
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MapIndexConfig;
+import com.hazelcast.config.MapStoreConfig;
+import com.hazelcast.config.MaxSizeConfig;
+import com.hazelcast.config.MemberAttributeConfig;
+import com.hazelcast.config.MemberGroupConfig;
+import com.hazelcast.config.MultiMapConfig;
+import com.hazelcast.config.MulticastConfig;
+import com.hazelcast.config.NearCacheConfig;
+import com.hazelcast.config.NetworkConfig;
+import com.hazelcast.config.PartitionGroupConfig;
+import com.hazelcast.config.PermissionConfig;
 import com.hazelcast.config.AbstractXmlConfigHelper.IterableNodeList;
 import com.hazelcast.config.PermissionConfig.PermissionType;
+import com.hazelcast.config.PermissionPolicyConfig;
+import com.hazelcast.config.QueueConfig;
+import com.hazelcast.config.QueueStoreConfig;
+import com.hazelcast.config.SSLConfig;
+import com.hazelcast.config.SecurityConfig;
+import com.hazelcast.config.SecurityInterceptorConfig;
+import com.hazelcast.config.SetConfig;
+import com.hazelcast.config.SymmetricEncryptionConfig;
+import com.hazelcast.config.TcpIpConfig;
+import com.hazelcast.config.TopicConfig;
+import com.hazelcast.config.WanReplicationConfig;
+import com.hazelcast.config.WanReplicationRef;
+import com.hazelcast.config.WanTargetClusterConfig;
 import com.hazelcast.spring.context.SpringManagedContext;
-
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.ManagedList;
@@ -180,6 +217,8 @@ public class HazelcastConfigBeanDefinitionParser extends AbstractHazelcastBeanDe
                     handleSocketInterceptorConfig(child, networkConfigBuilder);
                 } else if ("outbound-ports".equals(nodeName)) {
                     handleOutboundPorts(child, networkConfigBuilder);
+                } else if ("reuse-address".equals(nodeName)) {
+                    handleReuseAddress(child, networkConfigBuilder);
                 }
             }
             configBuilder.addPropertyValue("networkConfig", beanDefinition);
@@ -265,6 +304,11 @@ public class HazelcastConfigBeanDefinitionParser extends AbstractHazelcastBeanDe
                 }
             }
             networkConfigBuilder.addPropertyValue("outboundPortDefinitions", outboundPorts);
+        }
+
+        private void handleReuseAddress(final Node node, final BeanDefinitionBuilder networkConfigBuilder) {
+            String value = node.getTextContent();
+            networkConfigBuilder.addPropertyValue("reuseAddress", value);
         }
 
         private void handleSSLConfig(final Node node, final BeanDefinitionBuilder networkConfigBuilder) {

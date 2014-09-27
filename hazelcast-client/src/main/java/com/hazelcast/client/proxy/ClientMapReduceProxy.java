@@ -16,7 +16,7 @@
 
 package com.hazelcast.client.proxy;
 
-import com.hazelcast.client.InvocationClientRequest;
+import com.hazelcast.client.impl.client.InvocationClientRequest;
 import com.hazelcast.client.spi.ClientContext;
 import com.hazelcast.client.spi.ClientInvocationService;
 import com.hazelcast.client.spi.ClientProxy;
@@ -57,8 +57,8 @@ public class ClientMapReduceProxy
 
     private final ConcurrentMap<String, ClientTrackableJob> trackableJobs = new ConcurrentHashMap<String, ClientTrackableJob>();
 
-    public ClientMapReduceProxy(String instanceName, String serviceName, String objectName) {
-        super(instanceName, serviceName, objectName);
+    public ClientMapReduceProxy(String serviceName, String objectName) {
+        super(serviceName, objectName);
     }
 
     @Override

@@ -16,7 +16,7 @@
 
 package com.hazelcast.client.proxy;
 
-import com.hazelcast.client.ClientRequest;
+import com.hazelcast.client.impl.client.ClientRequest;
 import com.hazelcast.client.spi.ClientProxy;
 import com.hazelcast.concurrent.atomiclong.client.ApplyRequest;
 import com.hazelcast.concurrent.atomiclong.client.AlterRequest;
@@ -39,8 +39,8 @@ public class ClientAtomicLongProxy extends ClientProxy implements IAtomicLong {
     private final String name;
     private volatile Data key;
 
-    public ClientAtomicLongProxy(String instanceName, String serviceName, String objectId) {
-        super(instanceName, serviceName, objectId);
+    public ClientAtomicLongProxy(String serviceName, String objectId) {
+        super(serviceName, objectId);
         this.name = objectId;
     }
 

@@ -467,7 +467,7 @@ public class Config {
     public TopicConfig findTopicConfig(String name) {
         String baseName = getBaseName(name);
         TopicConfig config = lookupByPattern(topicConfigs, baseName);
-        if (config  != null) {
+        if (config != null) {
             return config.getAsReadOnly();
         }
         return getTopicConfig("default").getAsReadOnly();
@@ -849,6 +849,8 @@ public class Config {
         }
     }
 
+    // TODO: This mechanism isn't used anymore to determine if 2 HZ configurations are compatible.
+    // See {@link ConfigCheck} for more information.
     /**
      * @param config
      * @return true if config is compatible with this one,

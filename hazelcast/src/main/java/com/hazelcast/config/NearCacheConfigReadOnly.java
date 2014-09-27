@@ -24,7 +24,7 @@ public class NearCacheConfigReadOnly extends NearCacheConfig {
         super(config);
     }
 
-    public void setName(String name) {
+    public NearCacheConfig setName(String name) {
         throw new UnsupportedOperationException("This config is read-only");
     }
 
@@ -53,6 +53,10 @@ public class NearCacheConfigReadOnly extends NearCacheConfig {
     }
 
     public NearCacheConfig setInMemoryFormat(String inMemoryFormat) {
+        throw new UnsupportedOperationException("This config is read-only");
+    }
+
+    public NearCacheConfig setCacheLocalEntries(boolean cacheLocalEntries) {
         throw new UnsupportedOperationException("This config is read-only");
     }
 }

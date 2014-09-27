@@ -16,7 +16,7 @@
 
 package com.hazelcast.client.proxy;
 
-import com.hazelcast.client.ClientRequest;
+import com.hazelcast.client.impl.client.ClientRequest;
 import com.hazelcast.client.spi.ClientProxy;
 import com.hazelcast.concurrent.countdownlatch.client.AwaitRequest;
 import com.hazelcast.concurrent.countdownlatch.client.CountDownRequest;
@@ -31,8 +31,8 @@ public class ClientCountDownLatchProxy extends ClientProxy implements ICountDown
 
     private volatile Data key;
 
-    public ClientCountDownLatchProxy(String instanceName, String serviceName, String objectId) {
-        super(instanceName, serviceName, objectId);
+    public ClientCountDownLatchProxy(String serviceName, String objectId) {
+        super(serviceName, objectId);
     }
 
     public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
@@ -53,6 +53,9 @@ public class ClientCountDownLatchProxy extends ClientProxy implements ICountDown
     }
 
     public boolean trySetCount(int count) {
+        if (count < 0) {
+            throw new IllegalArgumentException("count can't be negative");
+        }
         SetCountRequest request = new SetCountRequest(getName(), count);
         Boolean result = invoke(request);
         return result;

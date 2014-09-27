@@ -18,7 +18,7 @@ package com.hazelcast.management.operation;
 
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.management.MapConfigAdapter;
-import com.hazelcast.map.MapService;
+import com.hazelcast.map.impl.MapService;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.spi.Operation;
@@ -53,6 +53,7 @@ public class UpdateMapConfigOperation extends Operation {
         newConfig.setMaxIdleSeconds(mapConfig.getMaxIdleSeconds());
         newConfig.setEvictionPolicy(mapConfig.getEvictionPolicy());
         newConfig.setEvictionPercentage(mapConfig.getEvictionPercentage());
+        newConfig.setMinEvictionCheckMillis(mapConfig.getMinEvictionCheckMillis());
         newConfig.setReadBackupData(mapConfig.isReadBackupData());
         newConfig.setBackupCount(mapConfig.getBackupCount());
         newConfig.setAsyncBackupCount(mapConfig.getAsyncBackupCount());

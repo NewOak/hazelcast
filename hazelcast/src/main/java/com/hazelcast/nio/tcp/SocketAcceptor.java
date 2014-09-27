@@ -141,7 +141,7 @@ public class SocketAcceptor implements Runnable {
             connectionManager.initSocket(socketChannel.socket());
             connectionManager.interceptSocket(socketChannel.socket(), true);
             socketChannel.configureBlocking(false);
-            connectionManager.assignSocketChannel(socketChannel);
+            connectionManager.assignSocketChannel(socketChannel, null);
         } catch (Exception e) {
             log(Level.WARNING, e.getClass().getName() + ": " + e.getMessage(), e);
             IOUtil.closeResource(socketChannel);
@@ -154,7 +154,6 @@ public class SocketAcceptor implements Runnable {
 
     private void log(Level level, String message, Exception e) {
         logger.log(level, message, e);
-        connectionManager.ioService.getSystemLogService().logConnection(message);
     }
 
 }

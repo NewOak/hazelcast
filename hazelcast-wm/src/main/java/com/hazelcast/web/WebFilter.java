@@ -63,50 +63,52 @@ import java.util.logging.Level;
  * <p/>
  * This filter supports the following {@code &lt;init-param&gt;} values:
  * <ul>
- *     <li>{@code use-client}: When enabled, a {@link com.hazelcast.client.HazelcastClient HazelcastClient} is
- *     used to connect to the cluster, rather than joining as a full node. (Default: {@code false})</li>
- *     <li>{@code config-location}: Specifies the location of an XML configuration file that can be used to
- *     initialize the {@link HazelcastInstance} (Default: None; the {@link HazelcastInstance} is initialized
- *     using its own defaults)</li>
- *     <li>{@code client-config-location}: Specifies the location of an XML configuration file that can be
- *     used to initialize the {@link HazelcastInstance}. <i>This setting is only checked when {@code use-client}
- *     is set to {@code true}.</i> (Default: Falls back on {@code config-location})</li>
- *     <li>{@code instance-name}: Names the {@link HazelcastInstance}. This can be used to reference an already-
- *     initialized {@link HazelcastInstance} in the same JVM (Default: The configured instance name, or a
- *     generated name if the configuration does not specify a value)</li>
- *     <li>{@code shutdown-on-destroy}: When enabled, shuts down the {@link HazelcastInstance} when the filter is
- *     destroyed (Default: {@code true})</li>
- *     <li>{@code map-name}: Names the {@link IMap} the filter should use to persist session details (Default:
- *     {@code "_web_" + ServletContext.getServletContextName()}; e.g. "_web_MyApp")</li>
- *     <li>{@code session-ttl-seconds}: Sets the {@link MapConfig#setTimeToLiveSeconds(int) time-to-live} for
- *     the {@link IMap} used to persist session details (Default: Uses the existing {@link MapConfig} setting
- *     for the {@link IMap}, which defaults to infinite)</li>
- *     <li>{@code sticky-session}: When enabled, optimizes {@link IMap} interactions by assuming individual sessions
- *     are only used from a single node (Default: {@code true})</li>
- *     <li>{@code deferred-write}: When enabled, optimizes {@link IMap} interactions by only writing session attributes
- *     at the end of a request. This can yield significant performance improvements for session-heavy applications
- *     (Default: {@code false})</li>
- *     <li>{@code cookie-name}: Sets the name for the Hazelcast session cookie (Default:
- *     {@link #HAZELCAST_SESSION_COOKIE_NAME "hazelcast.sessionId"}</li>
- *     <li>{@code cookie-domain}: Sets the domain for the Hazelcast session cookie (Default: {@code null})</li>
- *     <li>{@code cookie-secure}: When enabled, indicates the Hazelcast session cookie should only be sent over
- *     secure protocols (Default: {@code false})</li>
- *     <li>{@code cookie-http-only}: When enabled, marks the Hazelcast session cookie as "HttpOnly", indicating
- *     it should not be available to scripts (Default: {@code false})
- *     <ul>
- *         <li>{@code cookie-http-only} requires a Servlet 3.0-compatible container, such as Tomcat 7+ or Jetty 8+</li>
- *     </ul>
- *     </li>
+ * <li>{@code use-client}: When enabled, a {@link com.hazelcast.client.HazelcastClient HazelcastClient} is
+ * used to connect to the cluster, rather than joining as a full node. (Default: {@code false})</li>
+ * <li>{@code config-location}: Specifies the location of an XML configuration file that can be used to
+ * initialize the {@link HazelcastInstance} (Default: None; the {@link HazelcastInstance} is initialized
+ * using its own defaults)</li>
+ * <li>{@code client-config-location}: Specifies the location of an XML configuration file that can be
+ * used to initialize the {@link HazelcastInstance}. <i>This setting is only checked when {@code use-client}
+ * is set to {@code true}.</i> (Default: Falls back on {@code config-location})</li>
+ * <li>{@code instance-name}: Names the {@link HazelcastInstance}. This can be used to reference an already-
+ * initialized {@link HazelcastInstance} in the same JVM (Default: The configured instance name, or a
+ * generated name if the configuration does not specify a value)</li>
+ * <li>{@code shutdown-on-destroy}: When enabled, shuts down the {@link HazelcastInstance} when the filter is
+ * destroyed (Default: {@code true})</li>
+ * <li>{@code map-name}: Names the {@link IMap} the filter should use to persist session details (Default:
+ * {@code "_web_" + ServletContext.getServletContextName()}; e.g. "_web_MyApp")</li>
+ * <li>{@code session-ttl-seconds}: Sets the {@link MapConfig#setTimeToLiveSeconds(int) time-to-live} for
+ * the {@link IMap} used to persist session details (Default: Uses the existing {@link MapConfig} setting
+ * for the {@link IMap}, which defaults to infinite)</li>
+ * <li>{@code sticky-session}: When enabled, optimizes {@link IMap} interactions by assuming individual sessions
+ * are only used from a single node (Default: {@code true})</li>
+ * <li>{@code deferred-write}: When enabled, optimizes {@link IMap} interactions by only writing session attributes
+ * at the end of a request. This can yield significant performance improvements for session-heavy applications
+ * (Default: {@code false})</li>
+ * <li>{@code cookie-name}: Sets the name for the Hazelcast session cookie (Default:
+ * {@link #HAZELCAST_SESSION_COOKIE_NAME "hazelcast.sessionId"}</li>
+ * <li>{@code cookie-domain}: Sets the domain for the Hazelcast session cookie (Default: {@code null})</li>
+ * <li>{@code cookie-secure}: When enabled, indicates the Hazelcast session cookie should only be sent over
+ * secure protocols (Default: {@code false})</li>
+ * <li>{@code cookie-http-only}: When enabled, marks the Hazelcast session cookie as "HttpOnly", indicating
+ * it should not be available to scripts (Default: {@code false})
+ * <ul>
+ * <li>{@code cookie-http-only} requires a Servlet 3.0-compatible container, such as Tomcat 7+ or Jetty 8+</li>
+ * </ul>
+ * </li>
  * </ul>
  */
 public class WebFilter implements Filter {
 
+    public static final String WEB_FILTER_ATTRIBUTE_KEY = WebFilter.class.getName();
+
     protected static final String HAZELCAST_SESSION_ATTRIBUTE_SEPARATOR = "::hz::";
 
-    private static final ILogger LOGGER = Logger.getLogger(WebFilter.class);
-    private static final LocalCacheEntry NULL_ENTRY = new LocalCacheEntry();
-    private static final String HAZELCAST_REQUEST = "*hazelcast-request";
-    private static final String HAZELCAST_SESSION_COOKIE_NAME = "hazelcast.sessionId";
+    protected static final ILogger LOGGER = Logger.getLogger(WebFilter.class);
+    protected static final LocalCacheEntry NULL_ENTRY = new LocalCacheEntry();
+    protected static final String HAZELCAST_REQUEST = "*hazelcast-request";
+    protected static final String HAZELCAST_SESSION_COOKIE_NAME = "hazelcast.sessionId";
 
     protected ServletContext servletContext;
     protected FilterConfig filterConfig;
@@ -166,7 +168,7 @@ public class WebFilter implements Filter {
         // Register the WebFilter with the ServletContext so SessionListener can look it up. The name
         // here is WebFilter.class instead of getClass() because WebFilter can have subclasses
         servletContext = config.getServletContext();
-        servletContext.setAttribute(WebFilter.class.getName(), this);
+        servletContext.setAttribute(WEB_FILTER_ATTRIBUTE_KEY, this);
 
         initInstance();
         initCookieParams();
@@ -296,22 +298,37 @@ public class WebFilter implements Filter {
         return key.substring(key.indexOf(HAZELCAST_SESSION_ATTRIBUTE_SEPARATOR) + HAZELCAST_SESSION_ATTRIBUTE_SEPARATOR.length());
     }
 
-    private HazelcastHttpSession createNewSession(RequestWrapper requestWrapper, String existingSessionId) {
+    protected HazelcastHttpSession createNewSession(RequestWrapper requestWrapper, String existingSessionId) {
         String id = existingSessionId == null ? generateSessionId() : existingSessionId;
         if (requestWrapper.getOriginalSession(false) != null) {
             LOGGER.finest("Original session exists!!!");
         }
 
         HttpSession originalSession = requestWrapper.getOriginalSession(true);
-        HazelcastHttpSession hazelcastSession = new HazelcastHttpSession(id, originalSession, deferredWrite);
+        HazelcastHttpSession hazelcastSession = createHazelcastHttpSession(id, originalSession, deferredWrite);
         if (existingSessionId == null) {
+            hazelcastSession.setClusterWideNew(true);
             // If the session is being created for the first time, add its initial reference in the cluster-wide map.
             getClusterMap().executeOnKey(id, new AddSessionEntryProcessor());
         }
+
         updateSessionMaps(id, originalSession, hazelcastSession);
         addSessionCookie(requestWrapper, id);
 
         return hazelcastSession;
+    }
+
+    /**
+     * {@code HazelcastHttpSession instance} creation is split off to a separate method to allow subclasses to return a
+     * customized / extended version of {@code HazelcastHttpSession}.
+     *
+     * @param id the session id
+     * @param originalSession the original session
+     * @param deferredWrite whether writes are deferred
+     * @return a new HazelcastHttpSession instance
+     */
+    protected HazelcastHttpSession createHazelcastHttpSession(String id, HttpSession originalSession, boolean deferredWrite) {
+        return new HazelcastHttpSession(id, originalSession, deferredWrite);
     }
 
     private void prepareReloadingSession(HazelcastHttpSession hazelcastSession) {
@@ -343,7 +360,7 @@ public class WebFilter implements Filter {
      *                   in the cluster; otherwise, {@code false} to only remove the session globally if this
      *                   node was the final node referencing it
      */
-    private void destroySession(HazelcastHttpSession session, boolean invalidate) {
+    protected void destroySession(HazelcastHttpSession session, boolean invalidate) {
         if (LOGGER.isFinestEnabled()) {
             LOGGER.finest("Destroying local session: " + session.getId());
         }
@@ -481,21 +498,21 @@ public class WebFilter implements Filter {
         }
     }
 
-    private static class ResponseWrapper extends HttpServletResponseWrapper {
+    protected static class ResponseWrapper extends HttpServletResponseWrapper {
 
         public ResponseWrapper(final HttpServletResponse original) {
             super(original);
         }
     }
 
-    private static class LocalCacheEntry {
+    protected static class LocalCacheEntry {
         volatile boolean dirty;
         volatile boolean reload;
         boolean removed;
         private Object value;
     }
 
-    private class RequestWrapper extends HttpServletRequestWrapper {
+    protected class RequestWrapper extends HttpServletRequestWrapper {
         final ResponseWrapper res;
         HazelcastHttpSession hazelcastSession;
         String requestedSessionId;
@@ -545,7 +562,9 @@ public class WebFilter implements Filter {
                 if (hazelcastSession == null) {
                     final Boolean existing = (Boolean) getClusterMap()
                             .executeOnKey(requestedSessionId, new ReferenceSessionEntryProcessor());
-                    if (existing != null && existing && create) {
+                    boolean canOrMustCreate = create || !RequestWrapper.this.res.isCommitted()
+                            || getOriginalSession(false) != null;
+                    if (existing != null && existing && canOrMustCreate) {
                         // we already have the session in the cluster, so "copy" it to this node
                         hazelcastSession = createNewSession(RequestWrapper.this, requestedSessionId);
                     }
@@ -592,13 +611,15 @@ public class WebFilter implements Filter {
         }
     } // END of RequestWrapper
 
-    private class HazelcastHttpSession implements HttpSession {
+    protected class HazelcastHttpSession implements HttpSession {
 
         volatile boolean valid = true;
         final String id;
         final HttpSession originalSession;
         private final Map<String, LocalCacheEntry> localCache;
         private final boolean deferredWrite;
+        // only true if session is created first time in the cluster
+        private volatile boolean clusterWideNew;
 
         public HazelcastHttpSession(final String sessionId, final HttpSession originalSession,
                                     final boolean deferredWrite) {
@@ -606,6 +627,14 @@ public class WebFilter implements Filter {
             this.originalSession = originalSession;
             this.deferredWrite = deferredWrite;
             this.localCache = deferredWrite ? buildLocalCache() : null;
+        }
+
+        public HttpSession getOriginalSession() {
+            return originalSession;
+        }
+
+        public String getOriginalSessionId() {
+            return originalSession != null ? originalSession.getId() : null;
         }
 
         public Object getAttribute(final String name) {
@@ -675,7 +704,7 @@ public class WebFilter implements Filter {
         }
 
         public boolean isNew() {
-            return originalSession.isNew();
+            return originalSession.isNew() && clusterWideNew;
         }
 
         public void putValue(final String name, final Object value) {
@@ -713,7 +742,7 @@ public class WebFilter implements Filter {
                 entry.value = value;
                 entry.dirty = true;
             } else {
-                getClusterMap().put(buildAttributeName(name), value);
+                getClusterMap().set(buildAttributeName(name), value);
             }
         }
 
@@ -723,7 +752,7 @@ public class WebFilter implements Filter {
 
         /**
          * @return {@code true} if {@link #deferredWrite} is enabled <i>and</i> at least one entry in the local
-         *         cache is dirty; otherwise, {@code false}
+         * cache is dirty; otherwise, {@code false}
          */
         public boolean sessionChanged() {
             if (!deferredWrite) {
@@ -799,7 +828,7 @@ public class WebFilter implements Filter {
                             clusterMap.delete(buildAttributeName(entry.getKey()));
                             iterator.remove();
                         } else {
-                            clusterMap.put(buildAttributeName(entry.getKey()), cacheEntry.value);
+                            clusterMap.set(buildAttributeName(entry.getKey()), cacheEntry.value);
                             cacheEntry.dirty = false;
                         }
                     }
@@ -821,6 +850,10 @@ public class WebFilter implements Filter {
                 }
             }
             return keys;
+        }
+
+        public void setClusterWideNew(boolean clusterWideNew) {
+            this.clusterWideNew = clusterWideNew;
         }
     } // END of HazelSession
 } // END of WebFilter
