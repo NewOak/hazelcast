@@ -117,7 +117,7 @@ public class JoinConfig {
             throw new IllegalStateException("Multicast and AWS join can't be enabled at the same time");
         }
 
-	if (getMulticastConfig().isEnbaled() && getAzureConfig().isEnabled()) {
+	if (getMulticastConfig().isEnabled() && getAzureConfig().isEnabled()) {
 	    throw new IllegalStateException("Multicast and Azure join can't be enabled at the same time");
 	}
     }
