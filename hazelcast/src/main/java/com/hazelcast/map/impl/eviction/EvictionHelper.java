@@ -16,6 +16,7 @@
 
 package com.hazelcast.map.impl.eviction;
 
+import com.hazelcast.config.EvictionPolicy;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MaxSizeConfig;
 import com.hazelcast.core.EntryEventType;
@@ -47,6 +48,7 @@ public final class EvictionHelper {
     private static final int ONE_HUNDRED_PERCENT = 100;
     private static final int EVICTION_START_THRESHOLD_PERCENTAGE = 95;
     private static final int ONE_KILOBYTE = 1024;
+    private static final int ONE_MEGABYTE = ONE_KILOBYTE * ONE_KILOBYTE;
 
     private EvictionHelper() {
     }
@@ -76,10 +78,10 @@ public final class EvictionHelper {
 
     public static void removeEvictableRecords(final RecordStore recordStore, int evictableSize, final MapConfig mapConfig,
                                               final MapServiceContext mapServiceContext, boolean backup) {
-        final MapConfig.EvictionPolicy evictionPolicy = mapConfig.getEvictionPolicy();
+        final EvictionPolicy evictionPolicy = mapConfig.getEvictionPolicy();
         // criteria is a long value, like last access times or hits,
         // used for calculating LFU or LRU.
-        long[] criterias = createAndPopulateEvictionCriteriaArray(recordStore, evictionPolicy);
+        final long[] criterias = createAndPopulateEvictionCriteriaArray(recordStore, evictionPolicy);
         if (criterias == null) {
             return;
         }
@@ -111,7 +113,7 @@ public final class EvictionHelper {
     }
 
     private static long[] createAndPopulateEvictionCriteriaArray(RecordStore recordStore,
-                                                                 MapConfig.EvictionPolicy evictionPolicy) {
+                                                                 EvictionPolicy evictionPolicy) {
         final int size = recordStore.size();
         long[] criterias = null;
         int index = 0;
@@ -219,7 +221,7 @@ public final class EvictionHelper {
         return evictableSize;
     }
 
-    private static long getEvictionCriteriaValue(Record record, MapConfig.EvictionPolicy evictionPolicy) {
+    private static long getEvictionCriteriaValue(Record record, EvictionPolicy evictionPolicy) {
         long value;
         switch (evictionPolicy) {
             case LRU:
@@ -288,10 +290,7 @@ public final class EvictionHelper {
             return false;
         }
         final int size = getRecordStoreSize(mapName, container);
-        if (size >= maxSize) {
-            return true;
-        }
-        return false;
+        return size >= maxSize;
     }
 
     private static boolean isEvictableHeapSize(final MapContainer mapContainer) {
@@ -301,7 +300,7 @@ public final class EvictionHelper {
         }
         final MaxSizeConfig maxSizeConfig = mapContainer.getMapConfig().getMaxSizeConfig();
         final int maxSize = getApproximateMaxSize(maxSizeConfig.getSize());
-        return maxSize < (usedHeapSize / ONE_KILOBYTE / ONE_KILOBYTE);
+        return maxSize < (usedHeapSize / ONE_MEGABYTE);
     }
 
     private static boolean isEvictableHeapPercentage(final MapContainer mapContainer) {

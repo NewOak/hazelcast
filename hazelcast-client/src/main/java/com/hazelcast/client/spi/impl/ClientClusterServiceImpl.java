@@ -16,9 +16,9 @@
 
 package com.hazelcast.client.spi.impl;
 
-import com.hazelcast.client.ClientImpl;
-import com.hazelcast.client.HazelcastClient;
-import com.hazelcast.client.LifecycleServiceImpl;
+import com.hazelcast.client.impl.ClientImpl;
+import com.hazelcast.client.impl.HazelcastClientInstanceImpl;
+import com.hazelcast.client.impl.LifecycleServiceImpl;
 import com.hazelcast.client.config.ClientAwsConfig;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.connection.AddressProvider;
@@ -58,21 +58,17 @@ import java.util.logging.Level;
 
 import static com.hazelcast.core.LifecycleEvent.LifecycleState;
 
-
-/**
- * @author mdogan 5/15/13
- */
 public class ClientClusterServiceImpl implements ClientClusterService {
 
     private static final ILogger LOGGER = Logger.getLogger(ClientClusterService.class);
 
-    private final HazelcastClient client;
+    private final HazelcastClientInstanceImpl client;
     private final ClientConnectionManager connectionManager;
     private final ClusterListenerThread clusterThread;
     private final AtomicReference<Map<Address, MemberImpl>> membersRef = new AtomicReference<Map<Address, MemberImpl>>();
     private final ConcurrentMap<String, MembershipListener> listeners = new ConcurrentHashMap<String, MembershipListener>();
 
-    public ClientClusterServiceImpl(HazelcastClient client) {
+    public ClientClusterServiceImpl(HazelcastClientInstanceImpl client) {
         this.client = client;
         this.connectionManager = client.getConnectionManager();
         this.clusterThread = createListenerThread();
@@ -157,10 +153,6 @@ public class ClientClusterServiceImpl implements ClientClusterService {
     }
 
     public String addMembershipListener(MembershipListener listener) {
-        return addMembershipListenerWithInit(listener);
-    }
-
-    public String addMembershipListenerWithInit(MembershipListener listener) {
         final String id = UuidUtil.buildRandomUuidString();
         listeners.put(id, listener);
         if (listener instanceof InitialMembershipListener) {
@@ -171,7 +163,7 @@ public class ClientClusterServiceImpl implements ClientClusterService {
         return id;
     }
 
-    public String addMembershipListenerWithoutInit(MembershipListener listener) {
+    private String addMembershipListenerWithoutInit(MembershipListener listener) {
         final String id = UUID.randomUUID().toString();
         listeners.put(id, listener);
         return id;

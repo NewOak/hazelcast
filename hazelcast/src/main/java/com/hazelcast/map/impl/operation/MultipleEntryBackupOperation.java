@@ -25,12 +25,14 @@ public class MultipleEntryBackupOperation extends AbstractMultipleEntryOperation
 
     @Override
     public void run() throws Exception {
+        final long now = getNow();
+
         final Set<Data> keys = this.keys;
         for (Data dataKey : keys) {
             if (keyNotOwnedByThisPartition(dataKey)) {
                 continue;
             }
-            final Object oldValue = getValueFor(dataKey);
+            final Object oldValue = getValueFor(dataKey, now);
 
             final Object key = toObject(dataKey);
             final Object value = toObject(oldValue);
@@ -61,8 +63,7 @@ public class MultipleEntryBackupOperation extends AbstractMultipleEntryOperation
         int size = in.readInt();
         keys = new HashSet<Data>(size);
         for (int i = 0; i < size; i++) {
-            Data key = new Data();
-            key.readData(in);
+            Data key = in.readData();
             keys.add(key);
         }
     }
@@ -73,7 +74,7 @@ public class MultipleEntryBackupOperation extends AbstractMultipleEntryOperation
         out.writeObject(backupProcessor);
         out.writeInt(keys.size());
         for (Data key : keys) {
-            key.writeData(out);
+            out.writeData(key);
         }
     }
 

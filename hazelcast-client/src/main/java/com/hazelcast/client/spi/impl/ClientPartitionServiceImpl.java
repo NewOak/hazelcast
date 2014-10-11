@@ -16,8 +16,9 @@
 
 package com.hazelcast.client.spi.impl;
 
-import com.hazelcast.client.HazelcastClient;
+import com.hazelcast.client.impl.HazelcastClientInstanceImpl;
 import com.hazelcast.client.spi.ClientClusterService;
+import com.hazelcast.client.spi.ClientInvocationService;
 import com.hazelcast.client.spi.ClientPartitionService;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.Member;
@@ -38,16 +39,13 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * @author mdogan 5/16/13
- */
 public final class ClientPartitionServiceImpl implements ClientPartitionService {
 
     private static final ILogger LOGGER = Logger.getLogger(ClientPartitionService.class);
     private static final long PERIOD = 10;
     private static final long INITIAL_DELAY = 10;
 
-    private final HazelcastClient client;
+    private final HazelcastClientInstanceImpl client;
 
     private final ConcurrentHashMap<Integer, Address> partitions = new ConcurrentHashMap<Integer, Address>(271, 0.75f, 1);
 
@@ -55,7 +53,7 @@ public final class ClientPartitionServiceImpl implements ClientPartitionService 
 
     private volatile int partitionCount;
 
-    public ClientPartitionServiceImpl(HazelcastClient client) {
+    public ClientPartitionServiceImpl(HazelcastClientInstanceImpl client) {
         this.client = client;
     }
 
@@ -73,6 +71,7 @@ public final class ClientPartitionServiceImpl implements ClientPartitionService 
     }
 
     private class RefreshTask implements Runnable {
+        @Override
         public void run() {
             if (updating.compareAndSet(false, true)) {
                 try {
@@ -107,11 +106,13 @@ public final class ClientPartitionServiceImpl implements ClientPartitionService 
 
     private PartitionsResponse getPartitionsFrom(Address address) {
         try {
-            final Future<PartitionsResponse> future =
-                    client.getInvocationService().invokeOnTarget(new GetPartitionsRequest(), address);
+            ClientInvocationService invocationService = client.getInvocationService();
+            Future<PartitionsResponse> future = invocationService.invokeOnTarget(new GetPartitionsRequest(), address);
             return client.getSerializationService().toObject(future.get());
         } catch (Exception e) {
-            LOGGER.severe("Error while fetching cluster partition table!", e);
+            if (client.getLifecycleService().isRunning()) {
+                LOGGER.severe("Error while fetching cluster partition table!", e);
+            }
         }
         return null;
     }

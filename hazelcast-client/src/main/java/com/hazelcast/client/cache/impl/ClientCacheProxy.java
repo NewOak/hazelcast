@@ -61,8 +61,13 @@ import static com.hazelcast.cache.impl.CacheProxyUtil.validateNotNull;
 /**
  * ICache implementation for client
  *
- * @param <K> key
- * @param <V> value
+ * This proxy is the implementation of ICache and javax.cache.Cache which is returned by
+ * HazelcastClientCacheManager. Represent a cache on client.
+ *
+ * This implementation is a thin proxy implementation using hazelcast client infrastructure
+ *
+ * @param <K> key type
+ * @param <V> value type
  */
 public class ClientCacheProxy<K, V>
         extends AbstractClientCacheProxyExtension<K, V> {
@@ -316,13 +321,13 @@ public class ClientCacheProxy<K, V>
             CacheRemoveEntryListenerRequest removeReq = new CacheRemoveEntryListenerRequest(nameWithPrefix, regId);
             boolean isDeregistered = clientContext.getListenerService().stopListening(removeReq, regId);
 
-            if (!isDeregistered) {
-                addListenerLocally(regId, cacheEntryListenerConfiguration);
-            } else {
+            if (isDeregistered) {
                 cacheConfig.removeCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
                 deregisterCompletionListener();
                 //REMOVE ON OTHERS TOO
                 updateCacheListenerConfigOnOtherNodes(cacheEntryListenerConfiguration, false);
+            } else {
+                addListenerLocally(regId, cacheEntryListenerConfiguration);
             }
         }
     }

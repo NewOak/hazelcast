@@ -37,14 +37,14 @@ public class MultipleEntryOperation extends AbstractMultipleEntryOperation imple
 
     @Override
     public void run() throws Exception {
-        final Set<Data> keys = this.keys;
+        final long now = getNow();
 
+        final Set<Data> keys = this.keys;
         for (Data dataKey : keys) {
             if (keyNotOwnedByThisPartition(dataKey)) {
                 continue;
             }
-            final long now = getNow();
-            final Object oldValue = getValueFor(dataKey);
+            final Object oldValue = getValueFor(dataKey, now);
 
             final Object key = toObject(dataKey);
             final Object value = toObject(oldValue);
@@ -110,8 +110,7 @@ public class MultipleEntryOperation extends AbstractMultipleEntryOperation imple
         int size = in.readInt();
         keys = new HashSet<Data>(size);
         for (int i = 0; i < size; i++) {
-            Data key = new Data();
-            key.readData(in);
+            Data key = in.readData();
             keys.add(key);
         }
 
@@ -123,7 +122,7 @@ public class MultipleEntryOperation extends AbstractMultipleEntryOperation imple
         out.writeObject(entryProcessor);
         out.writeInt(keys.size());
         for (Data key : keys) {
-            key.writeData(out);
+            out.writeData(key);
         }
     }
 
