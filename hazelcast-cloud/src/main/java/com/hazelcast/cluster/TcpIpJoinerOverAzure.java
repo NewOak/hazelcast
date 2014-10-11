@@ -1,14 +1,15 @@
 package com.hazelcast.cluster;
 
-import java.util.Collection;
-
 import com.hazelcast.azure.AzureClient;
-import com.hazelcast.config.AwsConfig;
+import com.hazelcast.cluster.impl.TcpIpJoiner;
 import com.hazelcast.config.AzureConfig;
 import com.hazelcast.instance.Node;
 import com.hazelcast.util.ExceptionUtil;
 
-public class TcpIpJoinerOverAzure extends TcpIpJoiner {
+import java.util.Collection;
+
+public class TcpIpJoinerOverAzure extends TcpIpJoiner
+{
 
     final AzureClient azureClient;
 
